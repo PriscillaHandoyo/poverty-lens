@@ -105,5 +105,35 @@ if not row.empty:
     )
     st.plotly_chart(fig)
 
+    # plot the historical indicators trend
+    st.subheader(f"{country} Poverty Indicator Trends")
+
+    trend_indicators = {
+        "Poverty Headcount Ratio at $2.15/day": [f"{year}_215" for year in range(2000, 2026)],
+        "Poverty Headcount Ratio at $3.65/day": [f"{year}_365" for year in range(2000, 2026)]
+    }
+
+    trend_data = pd.DataFrame({"Year": list(range(2000, 2026))})
+    for label, cols in trend_indicators.items():
+        values = [row[col].values[0] if col in row.columns and not pd.isna(row[col].values[0]) else None for col in cols]
+        trend_data[label] = values
+
+    trend_melted = trend_data.melt(id_vars="Year", var_name="Indicator", value_name="Value")
+
+    fig_trend = px.line(
+        trend_melted,
+        x="Year",
+        y="Value",
+        color="Indicator",
+        template="plotly_dark",
+        markers=True
+    )
+    fig_trend.update_layout(
+        xaxis_title="Year",
+        yaxis_title="Value",
+        legend_title_text="Indicator"
+    )
+    st.plotly_chart(fig_trend)
+
 else:
     st.warning("Country data not found.")
