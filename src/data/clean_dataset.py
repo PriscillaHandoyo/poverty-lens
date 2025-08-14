@@ -27,6 +27,7 @@ def clean_data(df):
 
 def preprocess_df(dataset_directory=DATASET_DIRECTORY):
     csv_files = load_data(dataset_directory)
+    cleaned_files = []
     for file_path in csv_files:
         df = pd.read_csv(file_path, skiprows=1)
         cleaned_df = clean_data(df)
@@ -35,6 +36,8 @@ def preprocess_df(dataset_directory=DATASET_DIRECTORY):
         base_name = os.path.basename(file_path)
         cleaned_file_path = os.path.join(dataset_directory, f'cleaned_{base_name}')
         cleaned_df.to_csv(cleaned_file_path, index=False)
+        cleaned_files.append(cleaned_file_path)
+    return cleaned_files
 
 if __name__ == "__main__":
     preprocess_df()
