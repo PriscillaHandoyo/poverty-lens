@@ -136,6 +136,10 @@ if not row.empty:
 
     # plot the historical indicators trend
     st.subheader(f"{country} Poverty Indicator Trends")
+    st.markdown(
+        f"This chart shows the historical trends of poverty indicators in {country} from 2000 to 2025. "
+        "You can observe how the poverty headcount ratios have changed over time and compare their patterns."
+    )
 
     trend_indicators = {
         "Poverty Headcount Ratio at $2.15/day": [f"{year}_215" for year in range(2000, 2026)],
@@ -163,6 +167,29 @@ if not row.empty:
         legend_title_text="Indicator"
     )
     st.plotly_chart(fig_trend)
+
+    #description
+    insights = []
+    for label in trend_indicators.keys():
+        series = trend_data[label].dropna()
+        if not series.empty:
+            start_val = series.iloc[0]
+            end_val = series.iloc[-1]
+            if end_val > start_val:
+                insights.append(
+                    f"- The {label.lower()} in {country} increased from {start_val:.2%} in 2000 to {end_val:.2%} in 2025."
+                )
+            elif end_val < start_val:
+                insights.append(
+                    f"- The {label.lower()} in {country} decreased from {start_val:.2%} in 2000 to {end_val:.2%} in 2025."
+                )
+            else:
+                insights.append(
+                    f"- The {label.lower()} in {country} remained stable at {start_val:.2%} from 2000 to 2025."
+                )
+        else:
+            insights.append(f"- Data for {label.lower()} in {country} is not available for trend analysis.")
+    st.markdown("**Trend Insights:**\n" + "\n".join(insights))
 
 else:
     st.warning("Country data not found.")
