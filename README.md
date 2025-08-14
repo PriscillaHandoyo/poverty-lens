@@ -1,6 +1,8 @@
 # PovertyLens
 
-![PovertyLens Logo](readme_data/logo.png)
+<p align="center">
+  <img src="readme_data/logo.png" alt="PovertyLens Logo" width="180"/>
+</p>
 
 **PovertyLens** is an interactive Streamlit application for analyzing, predicting, and visualizing poverty risk across countries, years, and policy scenarios.  
 It leverages UNSDG 1 indicators and machine learning to provide actionable insights for policymakers, researchers, and advocates.
