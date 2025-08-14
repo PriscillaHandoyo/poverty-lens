@@ -103,6 +103,7 @@ if not row.empty:
     st.write(f"- Poverty Headcount Ratio at $3.65/day ({year}) in {country}: {val_365:.2%} (simulated)")
 
     # after taxes and transfers
+    st.info("Poverty Rate After Taxes and Transfers: Share of people living below the poverty line after government taxes and social transfers. Shows the impact of social protection policies.")
     col_post_tax = f"{year}"
     if col_post_tax in row.columns and not pd.isna(row[col_post_tax].values[0]):
         val_post_tax = row[col_post_tax].values[0]
