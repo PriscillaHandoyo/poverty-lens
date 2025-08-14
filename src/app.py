@@ -20,6 +20,37 @@ df_post_tax = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-pove
 df = df_215.merge(df_365, on=['ISO', 'Country'], suffixes=('_215', '_365'))
 df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
 
+# Sidebar layout for country selection and simulation
+st.sidebar.title("Country & Policy Simulation")
+
+country = st.sidebar.selectbox("Select Country", df['Country'].unique())
+row = df[df['Country'] == country]
+
+# year selection
+available_years = sorted([int(col.split('_')[0]) for col in df.columns if '_215' in col])
+year = st.sidebar.selectbox("Select Year", available_years, index=available_years.index(2025) if 2025 in available_years else 0)
+
+# model feature columns
+model_features = model.feature_names_in_
+
+# default values from data (if available)
+col_215 = f"{year}_215"
+col_365 = f"{year}_365"
+default_215 = row['2025_215'].values[0] if not row.empty and '2025_215' in row.columns else 0.0
+default_365 = row['2025_365'].values[0] if not row.empty and '2025_365' in row.columns else 0.0
+
+st.sidebar.markdown("#### Simulate Policy Changes")
+sim_215 = st.sidebar.slider(
+    f"Poverty Headcount Ratio at $2.15/day ({year})", min_value=0.0, max_value=1.0, value=float(default_215), step=0.01,
+    help="Adjust to simulate changes in extreme poverty rate."
+)
+sim_365 = st.sidebar.slider(
+    f"Poverty Headcount Ratio at $3.65/day ({year})", min_value=0.0, max_value=1.0, value=float(default_365), step=0.01,
+    help="Adjust to simulate changes in moderate poverty rate."
+)
+
+simulate = st.sidebar.button("Simulate Policy Changes")
+
 # st.write("Columns:", df.columns.tolist())
 
 st.title("PovertyLens")
@@ -28,9 +59,6 @@ st.markdown("""
 PovertyLens is a Poverty Risk Prediction App based on UNSDG 1 indicators.
 Select a country to view its poverty risk, compare with global averages, and explore historical trends.
 """)
-
-country = st.selectbox("Select Country", df['Country'].unique())
-row = df[df['Country'] == country]
 
 if not row.empty:
     # map visualization
@@ -42,62 +70,61 @@ if not row.empty:
             map_df,
             locations="iso_alpha",
             color="Selected",
-            color_continuous_scale=["green", "green"],  # Always green
+            color_continuous_scale=["green", "green"],
             locationmode="ISO-3",
             scope="world"
         )
-        fig_map.update_coloraxes(showscale=False)  # Hide color bar
+        fig_map.update_coloraxes(showscale=False)
         st.plotly_chart(fig_map)
     else:
         st.info("Add an ISO column to your dataset for map visualization.")
 
-    # only use _215 and _365 features for prediction
-    feature_cols = []
-    for suffix in ['_215', '_365']:
-        for year in range(2000, 2025):
-            col = f"{year}{suffix}"
-            if col in df.columns:
-                feature_cols.append(col)
-    X = row[feature_cols]
+    # prediction
+    # use only the columns the model expects
+    X = row[model_features].copy()
+    # Replace selected year columns with simulated values
+    if col_215 in X.columns:
+        X.at[X.index[0], col_215] = sim_215
+    if col_365 in X.columns:
+        X.at[X.index[0], col_365] = sim_365
+
     pred = model.predict(X)[0]
     st.subheader("Prediction Result")
-    st.markdown("This section shows the predicted poverty risk for the selected country in 2025 based on socioeconomic indicators.")
-    st.success(f"Poverty Risk (2025): {pred:.2%}")
+    st.markdown(f"This section shows the predicted poverty risk for {country} in {year} based on socioeconomic indicators.")
+    st.success(f"Poverty Risk ({year}): {pred:.2%}")
 
+    # key indicators
     st.subheader("Key Poverty Indicators")
     st.info("Poverty Headcount Ratio at `$2.15` per day: Percentage of the population living on less than `$2.15` per day (2017 PPP). This is the international extreme poverty line.")
-    st.write(f"- Poverty Headcount Ratio at $2.15/day (2025) in {country}: {row['2025_215'].values[0]:.2%}")
+    val_215 = sim_215
+    st.write(f"- Poverty Headcount Ratio at $2.15/day ({year}) in {country}: {val_215:.2%} (simulated)")
     st.info("Poverty Headcount Ratio at `$3.65` per day: Percentage of the population living on less than `$3.65` per day (2017 PPP). This is a higher poverty threshold used for lower-middle income countries.")
-    st.write(f"- Poverty Headcount Ratio at $3.65/day (2025) in {country}: {row['2025_365'].values[0]:.2%}")
+    val_365 = sim_365
+    st.write(f"- Poverty Headcount Ratio at $3.65/day ({year}) in {country}: {val_365:.2%} (simulated)")
 
-    # show after taxes and transfers only if available
-    st.info("Poverty Rate After Taxes and Transfers: Share of people living below the poverty line after government taxes and social transfers. Shows the impact of social protection policies.")
-    if '2025' in row.columns and not pd.isna(row['2025'].values[0]):
-        val_post_tax = row['2025'].values[0]
-        st.write(f"- Poverty Rate After Taxes and Transfers (2025) in {country}: {val_post_tax:.2%}")
+    # after taxes and transfers
+    col_post_tax = f"{year}"
+    if col_post_tax in row.columns and not pd.isna(row[col_post_tax].values[0]):
+        val_post_tax = row[col_post_tax].values[0]
+        st.write(f"- Poverty Rate After Taxes and Transfers ({year}) in {country}: {val_post_tax:.2%}")
     else:
-        val_post_tax = None  
-        st.write(f"- Poverty Rate After Taxes and Transfers (2025) in {country}: Data not available")
+        val_post_tax = None
+        st.write(f"- Poverty Rate After Taxes and Transfers ({year}) in {country}: Data not available")
 
     # plot country vs global average graph
-    st.subheader(f"{country} vs Global Average (2025)")
+    st.subheader(f"{country} vs Global Average ({year})")
     st.markdown(
-        f"This chart compares the {country} poverty indicators for 2025 with the global average. "
+        f"This chart compares the {country} poverty indicators for {year} with the global average. "
         "It helps you see how the country stands relative to the rest of the world for each indicator."
     )
 
     indicators = {
-        "Poverty Headcount Ratio at $2.15/day": "2025_215",
-        "Poverty Headcount Ratio at $3.65/day": "2025_365"
+        "Poverty Headcount Ratio at $2.15/day": col_215,
+        "Poverty Headcount Ratio at $3.65/day": col_365
     }
-
-    selected_country_values = []
-    global_avg_values = []
-    for label, col in indicators.items():
-        country_val = row[col].values[0] if col in row.columns and not pd.isna(row[col].values[0]) else None
-        global_val = df[col].mean() if col in df.columns else None
-        selected_country_values.append(country_val)
-        global_avg_values.append(global_val)
+    selected_country_values = [val_215, val_365]
+    global_avg_values = [df[col_215].mean() if col_215 in df.columns else None,
+                        df[col_365].mean() if col_365 in df.columns else None]
 
     compare_df = pd.DataFrame({
         'Indicator': list(indicators.keys()),
@@ -199,20 +226,20 @@ if not row.empty:
 
     # smart advice
     st.subheader("Smart Advice")   
-    
     advice_lines=[]
     # advice for $2.15/day vs global average indicator
-    if row['2025_215'].values[0] > df['2025_215'].mean():
-        advice_lines.append(
-            f"- {country} has a higher poverty headcount ratio at $2.15/day than the global average. Consider strengthening social safety nets and targeted poverty alleviation programs."
-        )
-    else:
-        advice_lines.append(
-            f"- {country}'s extreme poverty rate at $2.15/day is below the global average. Maintain current policies and monitor for emerging risks."
-        )
+    if val_215 is not None and global_avg_values[0] is not None:
+        if val_215 > global_avg_values[0]:
+            advice_lines.append(
+                f"- {country} has a higher poverty headcount ratio at $2.15/day than the global average. Consider strengthening social safety nets and targeted poverty alleviation programs."
+            )
+        else:
+            advice_lines.append(
+                f"- {country}'s extreme poverty rate at $2.15/day is below the global average. Maintain current policies and monitor for emerging risks."
+            )
 
-    if '2025' in row.columns and not pd.isna(row['2025'].values[0]):
-        if row['2025'].values[0] > df['2025'].mean():
+    if val_post_tax is not None and col_post_tax in df.columns and df[col_post_tax].mean() is not None:
+        if val_post_tax > df[col_post_tax].mean():
             advice_lines.append(
                 "- The poverty rate after taxes and transfers is above the global average. Review and enhance social protection and tax policies."
             )
@@ -221,36 +248,37 @@ if not row.empty:
                 "- Social protection policies are effective compared to global average. Continue to invest in inclusive programs."
             )
 
-    # Advice for $3.65/day vs global advice indicator
-    if row['2025_365'].values[0] > df['2025_365'].mean():
-        advice_lines.append(
-            f"- {country} has a higher poverty headcount ratio at $3.65/day than the global average. Focus on inclusive economic growth and job creation."
-        )
-    else:
-        advice_lines.append(
-            f"- {country}'s extreme poverty rate at $3.65/day is below the global average. Maintain efforts to support vulnerable groups."
-        )
+    # advice for $3.65/day vs global advice indicator
+    if val_365 is not None and global_avg_values[1] is not None:
+        if val_365 > global_avg_values[1]:
+            advice_lines.append(
+                f"- {country} has a higher poverty headcount ratio at $3.65/day than the global average. Focus on inclusive economic growth and job creation."
+            )
+        else:
+            advice_lines.append(
+                f"- {country}'s extreme poverty rate at $3.65/day is below the global average. Maintain efforts to support vulnerable groups."
+            )
 
     # advice based on trend ($2.15/day)
     series_215 = trend_data["Poverty Headcount Ratio at $2.15/day"].dropna()
     if not series_215.empty and series_215.iloc[-1] > series_215.iloc[0]:
         advice_lines.append(
-            "- The poverty headcount ratio at $2.15/day has increased over time. Investigate causes and strengthen poverty reduction strategies."
+            f"- The poverty headcount ratio at $2.15/day has increased over time. Investigate causes and strengthen poverty reduction strategies."
         )
     elif not series_215.empty and series_215.iloc[-1] < series_215.iloc[0]:
         advice_lines.append(
-            "- The poverty headcount ratio at $2.15/day has decreased over time. Continue successful interventions and monitor progress."
+            f"- The poverty headcount ratio at $2.15/day has decreased over time. Continue successful interventions and monitor progress."
         )
 
     # advice based on trend ($3.65/day)
     series_365 = trend_data["Poverty Headcount Ratio at $3.65/day"].dropna()
     if not series_365.empty and series_365.iloc[-1] > series_365.iloc[0]:
         advice_lines.append(
-            "- The poverty headcount ratio at $3.65/day has increased over time. Investigate causes and strengthen poverty reduction strategies."
+            f"- The poverty headcount ratio at $3.65/day has increased over time. Investigate causes and strengthen poverty reduction strategies."
         )
     elif not series_365.empty and series_365.iloc[-1] < series_365.iloc[0]:
         advice_lines.append(
-            "- The poverty headcount ratio at $3.65/day has decreased over time. Continue successful interventions and monitor progress."
+            f"- The poverty headcount ratio at $3.65/day has decreased over time. Continue successful interventions and monitor progress."
         )
 
     # general advice
