@@ -75,6 +75,10 @@ if not row.empty:
 
     # plot country vs global average graph
     st.subheader(f"{country} vs Global Average (2025)")
+    st.markdown(
+        f"This chart compares the {country} poverty indicators for 2025 with the global average. "
+        "It helps you see how the country stands relative to the rest of the world for each indicator."
+    )
 
     indicators = {
         "Poverty Headcount Ratio at $2.15/day": "2025_215",
@@ -109,6 +113,26 @@ if not row.empty:
         legend_title_text="Variable"
     )
     st.plotly_chart(fig)
+
+    #description
+    desc_lines = []
+    for i, label in enumerate(compare_df['Indicator']):
+        country_val = compare_df['Selected Country'][i]
+        global_val = compare_df['Global Average'][i]
+        if country_val is not None and global_val is not None:
+            if country_val > global_val:
+                desc_lines.append(
+                    f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **above** the global average (**{global_val:.2%}**)."
+                )
+            else:
+                desc_lines.append(
+                    f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **below** the global average (**{global_val:.2%}**)."
+                )
+        else:
+            desc_lines.append(
+                f"Data for {label.lower()} is not available for {country} or global average."
+            )
+    st.markdown("**Insights:**\n" + "\n".join([f"- {line}" for line in desc_lines]))
 
     # plot the historical indicators trend
     st.subheader(f"{country} Poverty Indicator Trends")
