@@ -27,6 +27,24 @@ country = st.selectbox("Select Country", df['Country'].unique())
 row = df[df['Country'] == country]
 
 if not row.empty:
+    # map visualization
+    st.subheader(f"Country Map: {country}")
+    if "ISO" in row.columns:
+        iso_code = row['ISO'].values[0]
+        map_df = pd.DataFrame({"iso_alpha": [iso_code], "Selected": [1]})
+        fig_map = px.choropleth(
+            map_df,
+            locations="iso_alpha",
+            color="Selected",
+            color_continuous_scale=["green", "green"],  # Always green
+            locationmode="ISO-3",
+            scope="world"
+        )
+        fig_map.update_coloraxes(showscale=False)  # Hide color bar
+        st.plotly_chart(fig_map)
+    else:
+        st.info("Add an ISO column to your dataset for map visualization.")
+
     # only use _215 and _365 features for prediction
     feature_cols = []
     for suffix in ['_215', '_365']:
