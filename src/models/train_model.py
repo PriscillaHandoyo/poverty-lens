@@ -21,7 +21,7 @@ def load_data():
 def prepare_features(df):
     # use 2000-2024 columns as features, 2025 as target
     feature_cols = []
-    for suffix in ['_215', '_365', '_post_tax']:
+    for suffix in ['_215', '_365']:
         for year in range(2000, 2025):  
             col = f"{year}{suffix}"
             if col in df.columns:
