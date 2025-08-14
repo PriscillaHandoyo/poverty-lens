@@ -16,12 +16,16 @@ def load_data():
     df = df_215.merge(df_365, on=['ISO', 'Country'], suffixes=('_215', '_365'))
     df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
 
+    # merge literacy rate
+    df_literacy = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-literacy-rate.csv'))
+    df = df.merge(df_literacy, on='Country', how='left')
+
     return df
 
 def prepare_features(df):
     # use 2000-2024 columns as features, 2025 as target
     feature_cols = []
-    for suffix in ['_215', '_365']:
+    for suffix in ['_215', '_365', '_literacy']:
         for year in range(2000, 2025):  
             col = f"{year}{suffix}"
             if col in df.columns:
