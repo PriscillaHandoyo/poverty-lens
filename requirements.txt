@@ -7,5 +7,3 @@ seaborn
 plotly
 pycountry
 fpdf
-os
-tempfile
