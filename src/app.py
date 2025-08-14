@@ -2,6 +2,8 @@ import os
 import streamlit as st
 import pandas as pd
 import joblib
+import matplotlib.pyplot as plt
+import plotly.express as px
 
 DATASET_DIRECTORY = os.path.join(os.path.dirname(__file__), 'data/dataset')
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models/poverty_risk_model.pkl')
@@ -16,7 +18,7 @@ df_post_tax = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-pove
 df = df_215.merge(df_365, on=['ISO', 'Country'], suffixes=('_215', '_365'))
 df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
 
-st.write("Columns:", df.columns.tolist())
+# st.write("Columns:", df.columns.tolist())
 
 st.title("PovertyLens")
 st.write("Poverty Risk Prediction App based on UNSDG 1 indicators")
@@ -47,5 +49,43 @@ if not row.empty:
         st.write(f"- Poverty Rate After Taxes and Transfers (2025): {val_post_tax:.2%}")
     else:
         st.write("- Poverty Rate After Taxes and Transfers (2025): Data not available")
+
+    # plot country vs global average graph
+    st.subheader(f"{country} vs Global Average (2025)")
+
+    indicators = {
+        "Poverty Headcount Ratio at $2.15/day": "2025_215",
+        "Poverty Headcount Ratio at $3.65/day": "2025_365"
+    }
+
+    selected_country_values = []
+    global_avg_values = []
+    for label, col in indicators.items():
+        country_val = row[col].values[0] if col in row.columns and not pd.isna(row[col].values[0]) else None
+        global_val = df[col].mean() if col in df.columns else None
+        selected_country_values.append(country_val)
+        global_avg_values.append(global_val)
+
+    compare_df = pd.DataFrame({
+        'Indicator': list(indicators.keys()),
+        'Selected Country': selected_country_values,
+        'Global Average': global_avg_values
+    })
+
+    fig = px.bar(
+        compare_df,
+        x='Indicator',
+        y=['Selected Country', 'Global Average'],
+        barmode='group',
+        color_discrete_map={"Selected Country": "deepskyblue", "Global Average": "orange"},
+        template="plotly_dark"
+    )
+    fig.update_layout(
+        xaxis_title="Indicator",
+        yaxis_title="Value",
+        legend_title_text="Variable"
+    )
+    st.plotly_chart(fig)
+
 else:
     st.warning("Country data not found.")
