@@ -21,7 +21,11 @@ df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
 # st.write("Columns:", df.columns.tolist())
 
 st.title("PovertyLens")
-st.write("Poverty Risk Prediction App based on UNSDG 1 indicators")
+# st.write("Poverty Risk Prediction App based on UNSDG 1 indicators")
+st.markdown("""
+PovertyLens is a Poverty Risk Prediction App based on UNSDG 1 indicators.
+Select a country to view its poverty risk, compare with global averages, and explore historical trends.
+""")
 
 country = st.selectbox("Select Country", df['Country'].unique())
 row = df[df['Country'] == country]
@@ -55,9 +59,10 @@ if not row.empty:
     X = row[feature_cols]
     pred = model.predict(X)[0]
     st.subheader("Prediction Result")
+    st.markdown("This section shows the predicted poverty risk for the selected country in 2025 based on socioeconomic indicators.")
     st.success(f"Poverty Risk (2025): {pred:.2%}")
 
-    st.subheader("Smart Insights")
+    st.subheader("Key Poverty Indicators")
     st.write(f"- Poverty Headcount Ratio at $2.15/day (2025): {row['2025_215'].values[0]:.2%}")
     st.write(f"- Poverty Headcount Ratio at $3.65/day (2025): {row['2025_365'].values[0]:.2%}")
 
