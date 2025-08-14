@@ -11,6 +11,7 @@ It leverages UNSDG 1 indicators and machine learning to provide actionable insig
 
 ## Table of Contents
 
+- [Project Link](#project-link)
 - [Features](#features)
 - [Installation](#installation)
 - [Data Requirements](#data-requirements)
@@ -20,6 +21,12 @@ It leverages UNSDG 1 indicators and machine learning to provide actionable insig
 - [Screenshots](#screenshots)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
+
+---
+
+## Project Link
+
+🔗 [View Project](https://poverty-lens.streamlit.app/)
 
 ---
 
