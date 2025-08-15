@@ -10,6 +10,48 @@ import tempfile
 # set up wide streamlit layout
 st.set_page_config(layout="wide")
 
+# content bar
+# st.markdown("""
+#     <style>
+#         .content-bar {
+#             width: 100%;
+#             background: #f5f5f5;
+#             padding: 0.7rem 2rem;
+#             display: flex;
+#             align-items: center;
+#             border-bottom: 1px solid #e0e0e0;
+#             margin-bottom: 1.5rem;
+#         }
+#         .content-bar a {
+#             margin-right: 2rem;
+#             font-weight: 500;
+#             color: #333;
+#             text-decoration: none;
+#             font-size: 1.1rem;
+#         }
+#         .content-bar a:hover {
+#             color: #4cbb17;
+#             text-decoration: underline;
+#         }
+#         .content-bar .logo {
+#             font-weight: bold;
+#             font-size: 1.3rem;
+#             color: #4cbb17;
+#             margin-right: 2rem;
+#         }
+#     </style>
+#     <div class="content-bar">
+#         <span class="logo">PovertyLens</span>
+#         <a href="#country-map">Map</a>
+#         <a href="#key-poverty-indicators">Indicators</a>
+#         <a href="#prediction-result">Prediction</a>
+#         <a href="#country-vs-global-average">Comparison</a>
+#         <a href="#poverty-indicator-trends">Trends</a>
+#         <a href="#smart-advice">Advice</a>
+#         <a href="#downloadable-report">Report</a>
+#     </div>
+# """, unsafe_allow_html=True)
+
 DATASET_DIRECTORY = os.path.join(os.path.dirname(__file__), 'data/dataset')
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models/poverty_risk_model.pkl')
 
@@ -208,7 +250,7 @@ if not row.empty:
     # plot the historical indicators trend
     trend_indicators = {
         "Poverty Headcount Ratio at $2.15/day": [f"{year}_215" for year in range(2000, 2026)],
-        "Poverty Headcount Ratio at $3.65/day": [f"{year}_365" for year in range(2000, 2026)]
+        "Poverty Headcount Ratio at $3.65/day": [f"{year}_365" for year in range(2000, 2026)],
     }
 
     trend_data = pd.DataFrame({"Year": list(range(2000, 2026))})
@@ -299,6 +341,46 @@ if not row.empty:
                 else:
                     insights.append(f"- Data for {label.lower()} in {country} is not available for trend analysis.")
             st.markdown("\n".join(insights))
+
+    # plot the historical indicators trend on poverty ratio after taxes and transfers
+    st.header(f"{country} Poverty Rate After Taxes and Transfers Trend")
+    st.caption(
+        f"This chart shows the historical trend of the poverty rate after taxes and transfers in {country} from 2000 to 2025. "
+        "It helps you understand how social protection policies and government interventions have impacted poverty over time."
+    )
+
+    trend_tt_indicators = {
+        "Poverty Rate After Taxes and Transfers": [str(year) for year in range(2000, 2026)]
+    }
+
+    trend_tt_data = pd.DataFrame({"Year": list(range(2000, 2026))})
+    for label, cols in trend_tt_indicators.items():
+        values = [row[col].values[0] if col in row.columns and not pd.isna(row[col].values[0]) else None for col in cols]
+        trend_tt_data[label] = values
+
+    trend_tt_melted = trend_tt_data.melt(id_vars="Year", var_name="Indicator", value_name="Value")
+
+    fig_tt_trend = px.line(
+        trend_tt_melted,
+        x="Year",
+        y="Value",
+        color="Indicator",
+        template="plotly_dark",
+        markers=True
+    )
+    fig_tt_trend.update_layout(
+        xaxis_title="Year",
+        yaxis_title="Value",
+        legend_title_text="Indicator",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5
+        )
+    )
+    st.plotly_chart(fig_tt_trend)
 
     # smart advice
     st.header("Smart Advice")   
