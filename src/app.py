@@ -75,21 +75,6 @@ default_215 = row[f'{year}_215'].values[0] if not row.empty and f'{year}_215' in
 default_365 = row[f'{year}_365'].values[0] if not row.empty and f'{year}_365' in row.columns else 0.0
 default_literacy = row[col_literacy].values[0] if col_literacy in row.columns else 0.0
 
-st.sidebar.markdown("#### Simulate Policy Changes")
-sim_215 = st.sidebar.slider(
-    f"Poverty Headcount Ratio at $2.15/day ({year})", min_value=0.0, max_value=1.0, value=float(default_215), step=0.01,
-    help="Adjust to simulate changes in extreme poverty rate."
-)
-sim_365 = st.sidebar.slider(
-    f"Poverty Headcount Ratio at $3.65/day ({year})", min_value=0.0, max_value=1.0, value=float(default_365), step=0.01,
-    help="Adjust to simulate changes in moderate poverty rate."
-)
-
-# unemployment rate slider
-col_unemployment = str(year)
-default_unemployment = row[col_unemployment].values[0] if col_unemployment in row.columns else 0.0
-
-
 # literacy rate slider
 col_literacy = f"{year}_literacy"
 val_literacy = row[col_literacy].values[0] if col_literacy in row.columns and not pd.isna(row[col_literacy].values[0]) else None
@@ -102,34 +87,76 @@ if col_literacy in df_literacy.columns:
 else:
     default_literacy = 0.0
 
-# unemployment slider
-sim_unemployment = st.sidebar.slider(
-    f"Unemployment Rate (%) ({year})", min_value=0.0, max_value=100.0,
-    value=float(default_unemployment * 100 if default_unemployment is not None else 0.0), step=0.1,
-    help="Adjust to simulate changes in unemployment rate."
-)
-
-# literacy slider
-sim_literacy = st.sidebar.slider(
-    f"Literacy Rate (%) ({year})", min_value=0.0, max_value=100.0,
-    value=float(default_literacy if default_literacy is not None else 0.0), step=0.1,
-    help="Adjust to simulate changes in literacy rate."
-)
-
 # employment rate
 col_employment = f"{year}_employment"
 val_employment = row[col_employment].values[0] if col_employment in row.columns and not pd.isna(row[col_employment].values[0]) else None
 default_employment = val_employment if val_employment is not None else 0.0
 
+# unemployment rate slider
+col_unemployment = str(year)
+default_unemployment = row[col_unemployment].values[0] if col_unemployment in row.columns else 0.0
+
+st.sidebar.markdown("#### Simulate Policy Changes")
+
+def initialize_slider_state(year, row):
+    # Only set if not already set
+    if "sim_215" not in st.session_state:
+        st.session_state.sim_215 = float(row[f'{year}_215'].values[0]) if f'{year}_215' in row.columns else 0.0
+    if "sim_365" not in st.session_state:
+        st.session_state.sim_365 = float(row[f'{year}_365'].values[0]) if f'{year}_365' in row.columns else 0.0
+    if "sim_unemployment" not in st.session_state:
+        val = row[str(year)].values[0] if str(year) in row.columns else 0.0
+        st.session_state.sim_unemployment = float(val * 100 if val is not None else 0.0)
+    if "sim_literacy" not in st.session_state:
+        val = row[f"{year}_literacy"].values[0] if f"{year}_literacy" in row.columns else 0.0
+        st.session_state.sim_literacy = float(val if val is not None else 0.0)
+    if "sim_employment" not in st.session_state:
+        val = row[f"{year}_employment"].values[0] if f"{year}_employment" in row.columns else 0.0
+        st.session_state.sim_employment = float(val if val is not None else 0.0)
+
+initialize_slider_state(year, row)
+
+sim_215 = st.sidebar.slider(
+    f"Poverty Headcount Ratio at $2.15/day ({year})", min_value=0.0, max_value=1.0,
+    value=st.session_state.sim_215, step=0.01,
+    key="sim_215",
+    help="Adjust to simulate changes in extreme poverty rate."
+)
+sim_365 = st.sidebar.slider(
+    f"Poverty Headcount Ratio at $3.65/day ({year})", min_value=0.0, max_value=1.0,
+    value=st.session_state.sim_365, step=0.01,
+    key="sim_365",
+    help="Adjust to simulate changes in moderate poverty rate."
+)
+sim_unemployment = st.sidebar.slider(
+    f"Unemployment Rate (%) ({year})", min_value=0.0, max_value=100.0,
+    value=st.session_state.sim_unemployment, step=0.1,
+    key="sim_unemployment",
+    help="Adjust to simulate changes in unemployment rate."
+)
+sim_literacy = st.sidebar.slider(
+    f"Literacy Rate (%) ({year})", min_value=0.0, max_value=100.0,
+    value=st.session_state.sim_literacy, step=0.1,
+    key="sim_literacy",
+    help="Adjust to simulate changes in literacy rate."
+)
 sim_employment = st.sidebar.slider(
     f"Employment Rate (%) ({year})", min_value=0.0, max_value=100.0,
-    value=float(default_employment if default_employment is not None else 0.0), step=0.1,
+    value=st.session_state.sim_employment, step=0.1,
+    key="sim_employment",
     help="Adjust to simulate changes in employment-to-population ratio."
 )
 
-# print(df[[ 'Country', f'{year}_literacy' ]].head(10))
-
-simulate = st.sidebar.button("Simulate Policy Changes")
+# if st.sidebar.button("Reset to 2025 Country Values"):
+#     st.session_state.sim_215 = float(row['2025_215'].values[0]) if '2025_215' in row.columns else 0.0
+#     st.session_state.sim_365 = float(row['2025_365'].values[0]) if '2025_365' in row.columns else 0.0
+#     val_unemp = row['2025'].values[0] if '2025' in row.columns else 0.0
+#     st.session_state.sim_unemployment = float(val_unemp * 100 if val_unemp is not None else 0.0)
+#     val_lit = row['2025_literacy'].values[0] if '2025_literacy' in row.columns else 0.0
+#     st.session_state.sim_literacy = float(val_lit if val_lit is not None else 0.0)
+#     val_emp = row['2025_employment'].values[0] if '2025_employment' in row.columns else 0.0
+#     st.session_state.sim_employment = float(val_emp if val_emp is not None else 0.0)
+#     st.experimental_rerun()
 
 # st.write("Columns:", df.columns.tolist())
 
@@ -764,102 +791,102 @@ if not row.empty:
     st.markdown("\n".join(advice_lines))
 
     # report data
-    st.subheader("Downloadable Report")
+    # st.subheader("Downloadable Report")
 
-    def create_pdf(country, pred, row, val_post_tax, desc_lines, insights, advice_lines, fig, fig_trend):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        # title
-        pdf.set_font("Arial", 'B', 18)
-        pdf.set_text_color(0, 70, 140)
-        pdf.cell(0, 15, f"PovertyLens Report: {country}", ln=True, align='C')
-        pdf.set_text_color(0, 0, 0)
-        # section separator
-        pdf.set_draw_color(0, 70, 140)
-        pdf.set_line_width(1)
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(5)
-        # prediction
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, "Prediction Result", ln=True)
-        pdf.set_font("Arial", '', 12)
-        pdf.set_text_color(34, 139, 34)
-        pdf.cell(0, 10, f"Poverty Risk (2025): {pred:.2%}", ln=True)
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(5)
-        # key indicators
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, "Key Poverty Indicators", ln=True)
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 8, f"- Poverty Headcount Ratio at $2.15/day (2025): {row['2025_215'].values[0]:.2%}", ln=True)
-        pdf.cell(0, 8, f"- Poverty Headcount Ratio at $3.65/day (2025): {row['2025_365'].values[0]:.2%}", ln=True)
-        pdf.cell(0, 8, f"- Poverty Rate After Taxes and Transfers (2025): {val_post_tax if val_post_tax else 'Data not available'}", ln=True)
-        pdf.ln(5)
-        # section separator
-        pdf.set_draw_color(220, 220, 220)
-        pdf.set_line_width(0.5)
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(5)
-        # insights
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, "Insights", ln=True)
-        pdf.set_font("Arial", '', 12)
-        for line in desc_lines:
-            pdf.multi_cell(0, 8, f"- {line}")
-        pdf.ln(3)
-        # trend insights
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, "Trend Insights", ln=True)
-        pdf.set_font("Arial", '', 12)
-        for line in insights:
-            pdf.multi_cell(0, 8, line)
-        pdf.ln(3)
-        # smart a dvice
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, "Smart Advice", ln=True)
-        pdf.set_font("Arial", '', 12)
-        for line in advice_lines:
-            pdf.multi_cell(0, 8, line)
-        pdf.ln(5)
-        # section separator
-        pdf.set_draw_color(0, 70, 140)
-        pdf.set_line_width(1)
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(5)
-        # save charts as images and add to PDF
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile1:
-            fig.write_image(tmpfile1.name)
-            pdf.image(tmpfile1.name, w=180)
-        pdf.ln(5)
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile2:
-            fig_trend.write_image(tmpfile2.name)
-            pdf.image(tmpfile2.name, w=180)
-        pdf.ln(5)
-        # footer
-        pdf.set_y(-20)
-        pdf.set_font("Arial", 'I', 10)
-        pdf.set_text_color(120, 120, 120)
-        pdf.cell(0, 10, "Generated by PovertyLens | github.com/priscillahandoyo/poverty-lens", 0, 0, 'C')
-        # save PDF to bytes
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_file:
-            pdf.output(pdf_file.name)
-            pdf_file.seek(0)
-            pdf_bytes = pdf_file.read()
-        return pdf_bytes
+    # def create_pdf(country, pred, row, val_post_tax, desc_lines, insights, advice_lines, fig, fig_trend):
+    #     pdf = FPDF()
+    #     pdf.add_page()
+    #     pdf.set_auto_page_break(auto=True, margin=15)
+    #     # title
+    #     pdf.set_font("Arial", 'B', 18)
+    #     pdf.set_text_color(0, 70, 140)
+    #     pdf.cell(0, 15, f"PovertyLens Report: {country}", ln=True, align='C')
+    #     pdf.set_text_color(0, 0, 0)
+    #     # section separator
+    #     pdf.set_draw_color(0, 70, 140)
+    #     pdf.set_line_width(1)
+    #     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    #     pdf.ln(5)
+    #     # prediction
+    #     pdf.set_font("Arial", 'B', 14)
+    #     pdf.cell(0, 10, "Prediction Result", ln=True)
+    #     pdf.set_font("Arial", '', 12)
+    #     pdf.set_text_color(34, 139, 34)
+    #     pdf.cell(0, 10, f"Poverty Risk (2025): {pred:.2%}", ln=True)
+    #     pdf.set_text_color(0, 0, 0)
+    #     pdf.ln(5)
+    #     # key indicators
+    #     pdf.set_font("Arial", 'B', 14)
+    #     pdf.cell(0, 10, "Key Poverty Indicators", ln=True)
+    #     pdf.set_font("Arial", '', 12)
+    #     pdf.cell(0, 8, f"- Poverty Headcount Ratio at $2.15/day (2025): {row['2025_215'].values[0]:.2%}", ln=True)
+    #     pdf.cell(0, 8, f"- Poverty Headcount Ratio at $3.65/day (2025): {row['2025_365'].values[0]:.2%}", ln=True)
+    #     pdf.cell(0, 8, f"- Poverty Rate After Taxes and Transfers (2025): {val_post_tax if val_post_tax else 'Data not available'}", ln=True)
+    #     pdf.ln(5)
+    #     # section separator
+    #     pdf.set_draw_color(220, 220, 220)
+    #     pdf.set_line_width(0.5)
+    #     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    #     pdf.ln(5)
+    #     # insights
+    #     pdf.set_font("Arial", 'B', 14)
+    #     pdf.cell(0, 10, "Insights", ln=True)
+    #     pdf.set_font("Arial", '', 12)
+    #     for line in desc_lines:
+    #         pdf.multi_cell(0, 8, f"- {line}")
+    #     pdf.ln(3)
+    #     # trend insights
+    #     pdf.set_font("Arial", 'B', 14)
+    #     pdf.cell(0, 10, "Trend Insights", ln=True)
+    #     pdf.set_font("Arial", '', 12)
+    #     for line in insights:
+    #         pdf.multi_cell(0, 8, line)
+    #     pdf.ln(3)
+    #     # smart a dvice
+    #     pdf.set_font("Arial", 'B', 14)
+    #     pdf.cell(0, 10, "Smart Advice", ln=True)
+    #     pdf.set_font("Arial", '', 12)
+    #     for line in advice_lines:
+    #         pdf.multi_cell(0, 8, line)
+    #     pdf.ln(5)
+    #     # section separator
+    #     pdf.set_draw_color(0, 70, 140)
+    #     pdf.set_line_width(1)
+    #     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    #     pdf.ln(5)
+    #     # save charts as images and add to PDF
+    #     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile1:
+    #         fig.write_image(tmpfile1.name)
+    #         pdf.image(tmpfile1.name, w=180)
+    #     pdf.ln(5)
+    #     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile2:
+    #         fig_trend.write_image(tmpfile2.name)
+    #         pdf.image(tmpfile2.name, w=180)
+    #     pdf.ln(5)
+    #     # footer
+    #     pdf.set_y(-20)
+    #     pdf.set_font("Arial", 'I', 10)
+    #     pdf.set_text_color(120, 120, 120)
+    #     pdf.cell(0, 10, "Generated by PovertyLens | github.com/priscillahandoyo/poverty-lens", 0, 0, 'C')
+    #     # save PDF to bytes
+    #     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_file:
+    #         pdf.output(pdf_file.name)
+    #         pdf_file.seek(0)
+    #         pdf_bytes = pdf_file.read()
+    #     return pdf_bytes
 
-    # button to download PDF
-    if st.button("Download Full Report as PDF"):
-        val_post_tax_str = f"{val_post_tax:.2%}" if val_post_tax is not None else "Data not available"
-        pdf_bytes = create_pdf(
-            country, pred, row, val_post_tax_str, desc_lines, insights, advice_lines, fig, fig_trend
-        )
-        st.download_button(
-            label="Click to Download PDF",
-            data=pdf_bytes,
-            file_name=f"{country}_poverty_report.pdf",
-            mime="application/pdf"
-        )
+    # # button to download PDF
+    # if st.button("Download Full Report as PDF"):
+    #     val_post_tax_str = f"{val_post_tax:.2%}" if val_post_tax is not None else "Data not available"
+    #     pdf_bytes = create_pdf(
+    #         country, pred, row, val_post_tax_str, desc_lines, insights, advice_lines, fig, fig_trend
+    #     )
+    #     st.download_button(
+    #         label="Click to Download PDF",
+    #         data=pdf_bytes,
+    #         file_name=f"{country}_poverty_report.pdf",
+    #         mime="application/pdf"
+    #     )
 
 else:
     st.warning("Country data not found.")
