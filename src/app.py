@@ -542,25 +542,25 @@ if not row.empty:
             if not series_tt.empty and not series_unemp.empty:
                 corr_pov_unemp = series_tt.corr(series_unemp)
                 st.markdown(
-                    f"- The correlation between poverty rate after taxes and transfers and unemployment rate over time is **{corr_pov_unemp:.2f}**. "
+                    f"The correlation between poverty rate after taxes and transfers and unemployment rate over time is **{corr_pov_unemp:.2f}**. "
                     "A positive value suggests that higher unemployment is associated with higher poverty after taxes and transfers."
                 )
             if not series_tt.empty and not series_lit.empty:
                 corr_pov_lit = series_tt.corr(series_lit)
                 st.markdown(
-                    f"- The correlation between poverty rate after taxes and transfers and literacy rate over time is **{corr_pov_lit:.2f}**. "
+                    f"The correlation between poverty rate after taxes and transfers and literacy rate over time is **{corr_pov_lit:.2f}**. "
                     "A negative value suggests that higher literacy is associated with lower poverty after taxes and transfers."
                 )
             if not series_tt.empty and not series_emp.empty:
                 corr_pov_emp = series_tt.corr(series_emp)
                 st.markdown(
-                    f"- The correlation between poverty rate after taxes and transfers and employment rate over time is **{corr_pov_emp:.2f}**. "
+                    f"The correlation between poverty rate after taxes and transfers and employment rate over time is **{corr_pov_emp:.2f}**. "
                     "A negative value suggests that higher employment is associated with lower poverty after taxes and transfers."
                 )
             if not series_emp.empty and not series_unemp.empty:
                 corr_emp_unemp = series_emp.corr(series_unemp)
                 st.markdown(
-                    f"- The correlation between employment rate and unemployment rate over time is **{corr_emp_unemp:.2f}**. "
+                    f"The correlation between employment rate and unemployment rate over time is **{corr_emp_unemp:.2f}**. "
                     "A strong negative value suggests that higher employment is associated with lower unemployment."
                 )
 
