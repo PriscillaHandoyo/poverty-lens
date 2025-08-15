@@ -604,20 +604,33 @@ if not row.empty:
 
     # smart advice
     st.header("Smart Advice")   
-    advice_lines=[]
-    # advice for $2.15/day vs global average indicator
+    advice_lines = []
+
+    # poverty headcount ratio at $2.15/day
     if val_215 is not None and global_avg_values[0] is not None:
         if val_215 > global_avg_values[0]:
             advice_lines.append(
-                f"- {country} has a higher poverty headcount ratio at $2.15/day than the global average. Consider strengthening social safety nets and targeted poverty alleviation programs."
+                f"- {country} has a higher extreme poverty rate ($2.15/day) than the global average. Strengthen social safety nets and targeted poverty alleviation programs."
             )
         else:
             advice_lines.append(
-                f"- {country}'s extreme poverty rate at $2.15/day is below the global average. Maintain current policies and monitor for emerging risks."
+                f"- {country}'s extreme poverty rate ($2.15/day) is below the global average. Maintain current policies and monitor for emerging risks."
             )
 
-    if val_post_tax is not None and col_post_tax in df.columns and df[col_post_tax].mean() is not None:
-        if val_post_tax > df[col_post_tax].mean():
+    # poverty headcount ratio $3.65/day
+    if val_365 is not None and global_avg_values[1] is not None:
+        if val_365 > global_avg_values[1]:
+            advice_lines.append(
+                f"- {country} has a higher moderate poverty rate ($3.65/day) than the global average. Focus on inclusive economic growth and job creation."
+            )
+        else:
+            advice_lines.append(
+                f"- {country}'s moderate poverty rate ($3.65/day) is below the global average. Maintain efforts to support vulnerable groups."
+           )
+
+    # post-tax
+    if val_post_tax is not None and global_avg_values[2] is not None:
+        if val_post_tax > global_avg_values[2]:
             advice_lines.append(
                 "- The poverty rate after taxes and transfers is above the global average. Review and enhance social protection and tax policies."
             )
@@ -626,38 +639,118 @@ if not row.empty:
                 "- Social protection policies are effective compared to global average. Continue to invest in inclusive programs."
             )
 
-    # advice for $3.65/day vs global advice indicator
-    if val_365 is not None and global_avg_values[1] is not None:
-        if val_365 > global_avg_values[1]:
+    # unemployment rate
+    if sim_unemployment is not None and global_avg_values[3] is not None:
+        if sim_unemployment > global_avg_values[3]:
             advice_lines.append(
-                f"- {country} has a higher poverty headcount ratio at $3.65/day than the global average. Focus on inclusive economic growth and job creation."
+               "- Unemployment rate is above the global average. Invest in job creation, skills training, and labor market reforms."
+           )
+        else:
+            advice_lines.append(
+                "- Unemployment rate is below the global average. Maintain labor market stability and support workforce development."
+            )
+
+    # literacy rate
+    if sim_literacy is not None and global_avg_values[4] is not None:
+        if sim_literacy < global_avg_values[4]:
+            advice_lines.append(
+                "- Literacy rate is below the global average. Invest in education access, quality, and adult literacy programs."
             )
         else:
             advice_lines.append(
-                f"- {country}'s extreme poverty rate at $3.65/day is below the global average. Maintain efforts to support vulnerable groups."
+                "- Literacy rate is above the global average. Continue supporting education and lifelong learning."
             )
 
-    # advice based on trend ($2.15/day)
+    # employment rate
+    if sim_employment is not None and global_avg_values[5] is not None:
+        if sim_employment < global_avg_values[5]:
+            advice_lines.append(
+               "- Employment rate is below the global average. Promote job opportunities and reduce barriers to employment."
+        )
+        else:
+            advice_lines.append(
+               "- Employment rate is above the global average. Maintain policies that support high labor force participation."
+            )
+
+    # trend poverty
     series_215 = trend_data["Poverty Headcount Ratio at $2.15/day"].dropna()
     if not series_215.empty and series_215.iloc[-1] > series_215.iloc[0]:
         advice_lines.append(
-            f"- The poverty headcount ratio at $2.15/day has increased over time. Investigate causes and strengthen poverty reduction strategies."
+            "- The extreme poverty rate ($2.15/day) has increased over time. Investigate causes and strengthen poverty reduction strategies."
         )
     elif not series_215.empty and series_215.iloc[-1] < series_215.iloc[0]:
         advice_lines.append(
-            f"- The poverty headcount ratio at $2.15/day has decreased over time. Continue successful interventions and monitor progress."
+            "- The extreme poverty rate ($2.15/day) has decreased over time. Continue successful interventions and monitor progress."
         )
 
-    # advice based on trend ($3.65/day)
     series_365 = trend_data["Poverty Headcount Ratio at $3.65/day"].dropna()
     if not series_365.empty and series_365.iloc[-1] > series_365.iloc[0]:
         advice_lines.append(
-            f"- The poverty headcount ratio at $3.65/day has increased over time. Investigate causes and strengthen poverty reduction strategies."
+            "- The moderate poverty rate ($3.65/day) has increased over time. Investigate causes and strengthen poverty reduction strategies."
         )
     elif not series_365.empty and series_365.iloc[-1] < series_365.iloc[0]:
         advice_lines.append(
-            f"- The poverty headcount ratio at $3.65/day has decreased over time. Continue successful interventions and monitor progress."
+            "- The moderate poverty rate ($3.65/day) has decreased over time. Continue successful interventions and monitor progress."
         )
+
+    # trend unemployment
+    series_unemp = trend_tt_data["Unemployment Rate"].dropna()
+    if not series_unemp.empty and series_unemp.iloc[-1] > series_unemp.iloc[0]:
+        advice_lines.append(
+            "- Unemployment rate has increased over time. Expand job creation initiatives and workforce training."
+        )
+    elif not series_unemp.empty and series_unemp.iloc[-1] < series_unemp.iloc[0]:
+        advice_lines.append(
+            "- Unemployment rate has decreased over time. Maintain effective labor market policies."
+        )
+
+    # trend literacy
+    series_lit = trend_tt_data["Literacy Rate"].dropna()
+    if not series_lit.empty and series_lit.iloc[-1] > series_lit.iloc[0]:
+        advice_lines.append(
+            "- Literacy rate has improved over time. Continue investing in education and literacy programs."
+        )
+    elif not series_lit.empty and series_lit.iloc[-1] < series_lit.iloc[0]:
+        advice_lines.append(
+           "- Literacy rate has declined over time. Investigate barriers and invest in education access."
+        )
+
+    # trend employment
+    series_emp = trend_tt_data["Employment Rate"].dropna()
+    if not series_emp.empty and series_emp.iloc[-1] > series_emp.iloc[0]:
+        advice_lines.append(
+            "- Employment rate has increased over time. Maintain policies that support job growth."
+        )
+    elif not series_emp.empty and series_emp.iloc[-1] < series_emp.iloc[0]:
+        advice_lines.append(
+           "- Employment rate has decreased over time. Address barriers to employment and promote workforce participation."
+        )
+
+    # relationship
+    if not series_tt.empty and not series_unemp.empty:
+        corr_pov_unemp = series_tt.corr(series_unemp)
+        if corr_pov_unemp > 0.3:
+            advice_lines.append(
+                "- High correlation between poverty and unemployment suggests that job creation can help reduce poverty."
+            )
+    if not series_tt.empty and not series_lit.empty:
+        corr_pov_lit = series_tt.corr(series_lit)
+        if corr_pov_lit < -0.3:
+            advice_lines.append(
+                "- Strong negative correlation between poverty and literacy suggests that improving education can lower poverty."
+            )
+    if not series_tt.empty and not series_emp.empty:
+        corr_pov_emp = series_tt.corr(series_emp)
+        if corr_pov_emp < -0.3:
+            advice_lines.append(
+                "- Strong negative correlation between poverty and employment rate suggests that increasing employment can reduce poverty."
+            )
+    if not series_emp.empty and not series_unemp.empty:
+        corr_emp_unemp = series_emp.corr(series_unemp)
+        if corr_emp_unemp < -0.3:
+            advice_lines.append(
+                "- Strong negative correlation between employment and unemployment rates confirms that boosting employment helps lower unemployment."
+            )
 
     # general advice
     advice_lines.append(
