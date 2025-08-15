@@ -19,11 +19,13 @@ df_215 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-h
 df_365 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-headcount-ratio-at-3-65-day.csv'))
 df_post_tax = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-rate-after-taxes-and-transfers.csv'))
 df_unemployment = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-unemployment-rate.csv'))
+df_literacy = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-literacy-rate.csv'))
 
 # merge data
 df = df_215.merge(df_365, on=['ISO', 'Country'], suffixes=('_215', '_365'))
 df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
 df = df.merge(df_unemployment, on=['ISO', 'Country'], suffixes=('', '_unemployment'), how='left')
+df = df.merge(df_literacy, on=['ISO', 'Country'], suffixes=('', '_literacy'), how='left')
 
 # sidebar layout for country selection and simulation
 st.sidebar.title("Country & Policy Simulation")
@@ -34,6 +36,17 @@ row = df[df['Country'] == country]
 # year selection
 available_years = sorted([int(col.split('_')[0]) for col in df.columns if '_215' in col])
 year = st.sidebar.selectbox("Select Year", available_years, index=available_years.index(2025) if 2025 in available_years else 0)
+
+# literacy rate for selected country and year
+col_literacy = str(year)
+if col_literacy in df_literacy.columns:
+    literacy_row = df_literacy[df_literacy['Country'] == country]
+    if not literacy_row.empty and not pd.isna(literacy_row[col_literacy].values[0]):
+        val_literacy = literacy_row[col_literacy].values[0]
+    else:
+        val_literacy = None
+else:
+    val_literacy = None
 
 # model feature columns
 model_features = model.feature_names_in_
@@ -54,6 +67,7 @@ else:
     val_unemployment = None
 default_215 = row[f'{year}_215'].values[0] if not row.empty and f'{year}_215' in row.columns else 0.0
 default_365 = row[f'{year}_365'].values[0] if not row.empty and f'{year}_365' in row.columns else 0.0
+default_literacy = row[col_literacy].values[0] if col_literacy in row.columns else 0.0
 
 st.sidebar.markdown("#### Simulate Policy Changes")
 sim_215 = st.sidebar.slider(
@@ -65,13 +79,34 @@ sim_365 = st.sidebar.slider(
     help="Adjust to simulate changes in moderate poverty rate."
 )
 
-# literacy rate slider
+# unemployment rate slider
 col_unemployment = str(year)
 default_unemployment = row[col_unemployment].values[0] if col_unemployment in row.columns else 0.0
 
+
+# literacy rate slider
+col_literacy = str(year)
+if col_literacy in df_literacy.columns:
+    literacy_row = df_literacy[df_literacy['Country'] == country]
+    if not literacy_row.empty and not pd.isna(literacy_row[col_literacy].values[0]):
+        default_literacy = literacy_row[col_literacy].values[0]
+    else:
+        default_literacy = 0.0
+else:
+    default_literacy = 0.0
+
+# unemployment slider
 sim_unemployment = st.sidebar.slider(
-    f"Unemployment Rate (%) ({year})", min_value=0.0, max_value=1.0, value=float(default_unemployment), step=0.1,
+    f"Unemployment Rate (%) ({year})", min_value=0.0, max_value=100.0,
+    value=float(default_unemployment * 100 if default_unemployment is not None else 0.0), step=0.1,
     help="Adjust to simulate changes in unemployment rate."
+)
+
+# literacy slider
+sim_literacy = st.sidebar.slider(
+    f"Literacy Rate (%) ({year})", min_value=0.0, max_value=100.0,
+    value=float(default_literacy if default_literacy is not None else 0.0), step=0.1,
+    help="Adjust to simulate changes in literacy rate."
 )
 
 # print(df[[ 'Country', f'{year}_literacy' ]].head(10))
@@ -122,8 +157,14 @@ if not row.empty:
             X.at[X.index[0], col_215] = sim_215
         if col_365 in X.columns:
             X.at[X.index[0], col_365] = sim_365
+        # if col_unemployment in X.columns:
+        #     X.at[X.index[0], col_unemployment] = sim_unemployment
+        # if col_literacy in X.columns:
+        #     X.at[X.index[0], col_literacy] = sim_literacy
         if col_unemployment in X.columns:
-            X.at[X.index[0], col_unemployment] = sim_unemployment
+            X.at[X.index[0], col_unemployment] = sim_unemployment / 100
+        if col_literacy in X.columns:
+            X.at[X.index[0], col_literacy] = sim_literacy / 100
 
         pred = model.predict(X)[0]
         st.header("Prediction Result")
@@ -137,20 +178,11 @@ if not row.empty:
             unsafe_allow_html=True
         )
 
-    # literacy rate
-    # if col_literacy in X.columns:
-    #     X.at[X.index[0], col_literacy] = sim_literacy
-    
-    # st.subheader("Literacy Rate")
-    # st.info("Literacy Rate: Percentage of people aged 15 and above who can read and write. Higher literacy is linked to lower poverty risk.")
-    # st.write(f"- Literacy Rate ({year}) in {country}: {sim_literacy:.1f}% (simulated)")
-
     # third row: key indicators
     st.header("Key Poverty Indicators")
     val_215 = sim_215
     val_365 = sim_365
-    # val_unemployment = sim_unemployment
-    # after taxes and transfers
+
     col_post_tax = f"{year}"
     if col_post_tax in row.columns and not pd.isna(row[col_post_tax].values[0]):
         val_post_tax = row[col_post_tax].values[0]
@@ -201,12 +233,19 @@ if not row.empty:
     # add some space between rows (indicators)
     st.markdown("<br>", unsafe_allow_html=True)  
 
-    col_unemployment = st.columns(1)
-    with col_unemployment[0]:
+    added_col = st.columns(2)
+    with added_col[0]:
         st.metric(
             label=f"Unemployment Rate ({year})",
-            value=f"{val_unemployment * 100:.1f}%" if val_unemployment is not None else "N/A",
+            value=f"{sim_unemployment:.1f}%" if sim_unemployment is not None else "N/A",
             help="Unemployment Rate: Percentage of the labor force that is jobless. Higher unemployment can increase poverty risk."
+     )
+
+    with added_col[1]:
+        st.metric(
+            label=f"Literacy Rate ({year})",
+            value=f"{sim_literacy:.1f}%" if sim_literacy is not None else "N/A",
+            help="Literacy Rate: Percentage of people aged 15 and above who can read and write."
         )
     
     # add some space
