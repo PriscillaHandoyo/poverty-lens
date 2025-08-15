@@ -505,21 +505,18 @@ if not row.empty:
                     "A negative value suggests that higher literacy is associated with lower poverty after taxes and transfers."
                 )
 
-    # st.markdown("<br>", unsafe_allow_html=True)    
-    # st.markdown("<br>", unsafe_allow_html=True)
-    # st.markdown("<br>", unsafe_allow_html=True)
-
     with fourth_row[1]:
-
-        st.markdown("<br>", unsafe_allow_html=True)    
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-
         st.header(f"**{country} Poverty Indicator Trends**")
         st.caption(
             f"This chart shows the historical trends of poverty indicators in {country} from 2000 to 2025. "
             "You can observe how the poverty headcount ratios have changed over time and compare their patterns."
         )
+
+        # add some space
+        st.markdown("<br>", unsafe_allow_html=True)    
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+
         st.plotly_chart(fig_trend, use_container_width=True, key="indicator_trends")
         st.divider()
         # insights
