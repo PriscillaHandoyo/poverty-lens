@@ -7,6 +7,11 @@ import plotly.express as px
 from fpdf import FPDF
 import tempfile
 
+try:
+    import kaleido
+except ImportError:
+    st.error("Kaleido is required for PDF export. Please install it with 'pip install kaleido'.")
+
 # set up wide streamlit layout
 st.set_page_config(layout="wide")
 
