@@ -10,48 +10,6 @@ import tempfile
 # set up wide streamlit layout
 st.set_page_config(layout="wide")
 
-# content bar
-# st.markdown("""
-#     <style>
-#         .content-bar {
-#             width: 100%;
-#             background: #f5f5f5;
-#             padding: 0.7rem 2rem;
-#             display: flex;
-#             align-items: center;
-#             border-bottom: 1px solid #e0e0e0;
-#             margin-bottom: 1.5rem;
-#         }
-#         .content-bar a {
-#             margin-right: 2rem;
-#             font-weight: 500;
-#             color: #333;
-#             text-decoration: none;
-#             font-size: 1.1rem;
-#         }
-#         .content-bar a:hover {
-#             color: #4cbb17;
-#             text-decoration: underline;
-#         }
-#         .content-bar .logo {
-#             font-weight: bold;
-#             font-size: 1.3rem;
-#             color: #4cbb17;
-#             margin-right: 2rem;
-#         }
-#     </style>
-#     <div class="content-bar">
-#         <span class="logo">PovertyLens</span>
-#         <a href="#country-map">Map</a>
-#         <a href="#key-poverty-indicators">Indicators</a>
-#         <a href="#prediction-result">Prediction</a>
-#         <a href="#country-vs-global-average">Comparison</a>
-#         <a href="#poverty-indicator-trends">Trends</a>
-#         <a href="#smart-advice">Advice</a>
-#         <a href="#downloadable-report">Report</a>
-#     </div>
-# """, unsafe_allow_html=True)
-
 DATASET_DIRECTORY = os.path.join(os.path.dirname(__file__), 'data/dataset')
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models/poverty_risk_model.pkl')
 
@@ -60,12 +18,12 @@ model = joblib.load(MODEL_PATH)
 df_215 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-headcount-ratio-at-2-15-day.csv'))
 df_365 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-headcount-ratio-at-3-65-day.csv'))
 df_post_tax = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-rate-after-taxes-and-transfers.csv'))
-# df_literacy = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-literacy-rate.csv'))
+# df_unemployment = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-unemployment-rate.csv'))
 
 # merge data
 df = df_215.merge(df_365, on=['ISO', 'Country'], suffixes=('_215', '_365'))
 df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
-# df = df.merge(df_literacy, on='Country', how='left')
+# df = df.merge(df_unemployment, on='Country', how='left')
 
 # sidebar layout for country selection and simulation
 st.sidebar.title("Country & Policy Simulation")
@@ -76,14 +34,6 @@ row = df[df['Country'] == country]
 # year selection
 available_years = sorted([int(col.split('_')[0]) for col in df.columns if '_215' in col])
 year = st.sidebar.selectbox("Select Year", available_years, index=available_years.index(2025) if 2025 in available_years else 0)
-
-# col_literacy = f"{year}_literacy"
-# default_literacy = row[col_literacy].values[0] if not row.empty and col_literacy in row.columns else 0.0
-
-# sim_literacy = st.sidebar.slider(
-#     f"Literacy Rate (%) ({year})", min_value=0.0, max_value=100.0, value=float(default_literacy), step=0.1,
-#     help="Adjust to simulate changes in literacy rate."
-# )
 
 # model feature columns
 model_features = model.feature_names_in_
@@ -103,6 +53,15 @@ sim_365 = st.sidebar.slider(
     f"Poverty Headcount Ratio at $3.65/day ({year})", min_value=0.0, max_value=1.0, value=float(default_365), step=0.01,
     help="Adjust to simulate changes in moderate poverty rate."
 )
+
+# literacy rate slider
+# col_unemployment = f"{year}_unemployment"
+# default_unemployment = row[col_unemployment].values[0] if not row.empty and col_unemployment in row.columns else 0.0
+
+# sim_unemployment = st.sidebar.slider(
+#     f"Unemployment Rate (%) ({year})", min_value=0.0, max_value=100.0, value=float(default_unemployment), step=0.1,
+#     help="Adjust to simulate changes in unemployment rate."
+# )
 
 # print(df[[ 'Country', f'{year}_literacy' ]].head(10))
 
@@ -152,6 +111,8 @@ if not row.empty:
             X.at[X.index[0], col_215] = sim_215
         if col_365 in X.columns:
             X.at[X.index[0], col_365] = sim_365
+        # if col_unemployment in X.columns:
+        #     X.at[X.index[0], col_unemployment] = sim_unemployment
 
         pred = model.predict(X)[0]
         st.header("Prediction Result")
@@ -206,6 +167,17 @@ if not row.empty:
             value=f"{val_post_tax:.2%}" if val_post_tax is not None else "N/A",
             help="Poverty Rate After Taxes and Transfers: Share of people living below the poverty line after government taxes and social transfers. Shows the impact of social protection policies."
         )
+    
+    # add some space between rows (indicators)
+    # st.markdown("<br>", unsafe_allow_html=True)  
+
+    # col_unemployment = st.columns(1)
+    # with col_unemployment[0]:
+    #     st.metric(
+    #         label=f"Unemployment Rate ({year})",
+    #         value=f"{sim_unemployment:.1f}%" if sim_unemployment is not None else "N/A",
+    #         help="Unemployment Rate: Percentage of the labor force that is jobless. Higher unemployment can increase poverty risk."
+    #     )
     
     # add some space
     st.markdown("<br>", unsafe_allow_html=True) 
