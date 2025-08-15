@@ -505,6 +505,10 @@ if not row.empty:
                     "A negative value suggests that higher literacy is associated with lower poverty after taxes and transfers."
                 )
 
+    st.markdown("<br>", unsafe_allow_html=True)    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
     with fourth_row[1]:
         st.header(f"**{country} Poverty Indicator Trends**")
         st.caption(
