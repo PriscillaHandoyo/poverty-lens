@@ -52,8 +52,8 @@ if col_unemployment in df_unemployment.columns:
         val_unemployment = None
 else:
     val_unemployment = None
-default_215 = row['2025_215'].values[0] if not row.empty and '2025_215' in row.columns else 0.0
-default_365 = row['2025_365'].values[0] if not row.empty and '2025_365' in row.columns else 0.0
+default_215 = row[f'{year}_215'].values[0] if not row.empty and f'{year}_215' in row.columns else 0.0
+default_365 = row[f'{year}_365'].values[0] if not row.empty and f'{year}_365' in row.columns else 0.0
 
 st.sidebar.markdown("#### Simulate Policy Changes")
 sim_215 = st.sidebar.slider(
@@ -149,7 +149,7 @@ if not row.empty:
     st.header("Key Poverty Indicators")
     val_215 = sim_215
     val_365 = sim_365
-    val_unemployment = sim_unemployment
+    # val_unemployment = sim_unemployment
     # after taxes and transfers
     col_post_tax = f"{year}"
     if col_post_tax in row.columns and not pd.isna(row[col_post_tax].values[0]):
