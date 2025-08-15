@@ -7,6 +7,9 @@ import plotly.express as px
 from fpdf import FPDF
 import tempfile
 
+# set up wide streamlit layout
+st.set_page_config(layout="wide")
+
 DATASET_DIRECTORY = os.path.join(os.path.dirname(__file__), 'data/dataset')
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models/poverty_risk_model.pkl')
 
@@ -65,45 +68,60 @@ simulate = st.sidebar.button("Simulate Policy Changes")
 
 # st.write("Columns:", df.columns.tolist())
 
-st.title("PovertyLens")
-# st.write("Poverty Risk Prediction App based on UNSDG 1 indicators")
-st.markdown("""
-PovertyLens is a Poverty Risk Prediction App based on UNSDG 1 indicators.
-Select a country to view its poverty risk, compare with global averages, and explore historical trends.
-""")
-
 if not row.empty:
-    # map visualization
-    st.subheader(f"Country Map: {country}")
-    if "ISO" in row.columns:
-        iso_code = row['ISO'].values[0]
-        map_df = pd.DataFrame({"iso_alpha": [iso_code], "Selected": [1]})
-        fig_map = px.choropleth(
-            map_df,
-            locations="iso_alpha",
-            color="Selected",
-            color_continuous_scale=["green", "green"],
-            locationmode="ISO-3",
-            scope="world"
+    # first row: title, description, and logo
+    first_row = st.columns([6, 3, 1])
+    with first_row[0]:
+        st.title("PovertyLens")
+        st.markdown("""
+        PovertyLens is a Poverty Risk Prediction App based on UNSDG 1 indicators.
+        Select a country to view its poverty risk, compare with global averages, and explore historical trends.
+        """)
+    with first_row[1]:
+        st.write("")  # Spacer for alignment
+    with first_row[2]:
+        st.image(os.path.join(os.path.dirname(__file__), "../readme_data/logo.png"), width=80)
+
+    # second row: map visualization and prediction result
+    second_row = st.columns([7, 5])
+    with second_row[0]:
+        st.header(f"Country Map: {country}")
+        if "ISO" in row.columns:
+            iso_code = row['ISO'].values[0]
+            map_df = pd.DataFrame({"iso_alpha": [iso_code], "Selected": [1]})
+            fig_map = px.choropleth(
+                map_df,
+                locations="iso_alpha",
+                color="Selected",
+                color_continuous_scale=["#4cbb17", "#4cbb17"],
+                locationmode="ISO-3",
+                scope="world"
+            )
+            fig_map.update_coloraxes(showscale=False)
+            st.plotly_chart(fig_map, use_container_width=True, key="country_map")
+        else:
+            st.info("Add an ISO column to your dataset for map visualization.")
+
+    with second_row[1]:
+        # use only the columns the model expects
+        X = row[model_features].copy()
+        # Replace selected year columns with simulated values
+        if col_215 in X.columns:
+            X.at[X.index[0], col_215] = sim_215
+        if col_365 in X.columns:
+            X.at[X.index[0], col_365] = sim_365
+
+        pred = model.predict(X)[0]
+        st.header("Prediction Result")
+        st.caption(f"This section shows the predicted poverty risk for {country} in {year} based on socioeconomic indicators.")
+        st.markdown(
+            f"""
+            <div style="display: flex; justify-content: center; align-items: center; height: 280px;">
+                <span style="font-size: 8rem; font-weight: bold; color: #4cbb17;">{pred:.2%}</span>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
-        fig_map.update_coloraxes(showscale=False)
-        st.plotly_chart(fig_map)
-    else:
-        st.info("Add an ISO column to your dataset for map visualization.")
-
-    # prediction
-    # use only the columns the model expects
-    X = row[model_features].copy()
-    # Replace selected year columns with simulated values
-    if col_215 in X.columns:
-        X.at[X.index[0], col_215] = sim_215
-    if col_365 in X.columns:
-        X.at[X.index[0], col_365] = sim_365
-
-    pred = model.predict(X)[0]
-    st.subheader("Prediction Result")
-    st.markdown(f"This section shows the predicted poverty risk for {country} in {year} based on socioeconomic indicators.")
-    st.success(f"Poverty Risk ({year}): {pred:.2%}")
 
     # literacy rate
     # if col_literacy in X.columns:
@@ -113,8 +131,8 @@ if not row.empty:
     # st.info("Literacy Rate: Percentage of people aged 15 and above who can read and write. Higher literacy is linked to lower poverty risk.")
     # st.write(f"- Literacy Rate ({year}) in {country}: {sim_literacy:.1f}% (simulated)")
 
-    # key indicators
-    st.subheader("Key Poverty Indicators")
+    # third row: key indicators
+    st.header("Key Poverty Indicators")
     val_215 = sim_215
     val_365 = sim_365
     # after taxes and transfers
@@ -146,14 +164,12 @@ if not row.empty:
             value=f"{val_post_tax:.2%}" if val_post_tax is not None else "N/A",
             help="Poverty Rate After Taxes and Transfers: Share of people living below the poverty line after government taxes and social transfers. Shows the impact of social protection policies."
         )
+    
+    # add some space
+    st.markdown("<br>", unsafe_allow_html=True) 
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # plot country vs global average graph
-    st.subheader(f"{country} vs Global Average ({year})")
-    st.markdown(
-        f"This chart compares the {country} poverty indicators for {year} with the global average. "
-        "It helps you see how the country stands relative to the rest of the world for each indicator."
-    )
-
     indicators = {
         "Poverty Headcount Ratio at $2.15/day": col_215,
         "Poverty Headcount Ratio at $3.65/day": col_365
@@ -179,37 +195,17 @@ if not row.empty:
     fig.update_layout(
         xaxis_title="Indicator",
         yaxis_title="Value",
-        legend_title_text="Variable"
+        legend_title_text="Variable",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5
+        )
     )
-    st.plotly_chart(fig)
-
-    #description
-    desc_lines = []
-    for i, label in enumerate(compare_df['Indicator']):
-        country_val = compare_df['Selected Country'][i]
-        global_val = compare_df['Global Average'][i]
-        if country_val is not None and global_val is not None:
-            if country_val > global_val:
-                desc_lines.append(
-                    f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **above** the global average (**{global_val:.2%}**)."
-                )
-            else:
-                desc_lines.append(
-                    f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **below** the global average (**{global_val:.2%}**)."
-                )
-        else:
-            desc_lines.append(
-                f"Data for {label.lower()} is not available for {country} or global average."
-            )
-    st.markdown("**Insights:**\n" + "\n".join([f"- {line}" for line in desc_lines]))
 
     # plot the historical indicators trend
-    st.subheader(f"{country} Poverty Indicator Trends")
-    st.markdown(
-        f"This chart shows the historical trends of poverty indicators in {country} from 2000 to 2025. "
-        "You can observe how the poverty headcount ratios have changed over time and compare their patterns."
-    )
-
     trend_indicators = {
         "Poverty Headcount Ratio at $2.15/day": [f"{year}_215" for year in range(2000, 2026)],
         "Poverty Headcount Ratio at $3.65/day": [f"{year}_365" for year in range(2000, 2026)]
@@ -233,35 +229,79 @@ if not row.empty:
     fig_trend.update_layout(
         xaxis_title="Year",
         yaxis_title="Value",
-        legend_title_text="Indicator"
+        legend_title_text="Indicator",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5
+        )
     )
-    st.plotly_chart(fig_trend)
 
-    #description
-    insights = []
-    for label in trend_indicators.keys():
-        series = trend_data[label].dropna()
-        if not series.empty:
-            start_val = series.iloc[0]
-            end_val = series.iloc[-1]
-            if end_val > start_val:
-                insights.append(
-                    f"- The {label.lower()} in {country} increased from {start_val:.2%} in 2000 to {end_val:.2%} in 2025."
-                )
-            elif end_val < start_val:
-                insights.append(
-                    f"- The {label.lower()} in {country} decreased from {start_val:.2%} in 2000 to {end_val:.2%} in 2025."
-                )
-            else:
-                insights.append(
-                    f"- The {label.lower()} in {country} remained stable at {start_val:.2%} from 2000 to 2025."
-                )
-        else:
-            insights.append(f"- Data for {label.lower()} in {country} is not available for trend analysis.")
-    st.markdown("**Trend Insights:**\n" + "\n".join(insights))
+    # fourth row: country vs global average and trend charts
+    fourth_row = st.columns([6, 6])
+    with fourth_row[0]:
+        st.header(f"**{country} vs Global Average ({year})**")
+        st.caption(
+            f"This chart compares the {country} poverty indicators for {year} with the global average. "
+            "It helps you see how the country stands relative to the rest of the world for each indicator."
+        )
+        st.plotly_chart(fig, use_container_width=True, key="country_vs_global")
+        # insight
+        with st.expander("Show Insights"):
+            desc_lines = []
+            for i, label in enumerate(compare_df['Indicator']):
+                country_val = compare_df['Selected Country'][i]
+                global_val = compare_df['Global Average'][i]
+                if country_val is not None and global_val is not None:
+                    if country_val > global_val:
+                        desc_lines.append(
+                            f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **above** the global average (**{global_val:.2%}**)."
+                     )
+                    else:
+                        desc_lines.append(
+                            f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **below** the global average (**{global_val:.2%}**)."
+                        )
+                else:
+                    desc_lines.append(
+                        f"Data for {label.lower()} is not available for {country} or global average."
+                    )
+            st.markdown("\n".join([f"- {line}" for line in desc_lines]))
+
+    with fourth_row[1]:
+        st.header(f"**{country} Poverty Indicator Trends**")
+        st.caption(
+            f"This chart shows the historical trends of poverty indicators in {country} from 2000 to 2025. "
+            "You can observe how the poverty headcount ratios have changed over time and compare their patterns."
+        )
+        st.plotly_chart(fig_trend, use_container_width=True, key="indicator_trends")
+        # insights
+        with st.expander("Show Insights"):
+            insights = []
+            for label in trend_indicators.keys():
+                series = trend_data[label].dropna()
+                if not series.empty:
+                    start_val = series.iloc[0]
+                    end_val = series.iloc[-1]
+                    if end_val > start_val:
+                        insights.append(
+                            f"- The {label.lower()} in {country} increased from {start_val:.2%} in 2000 to {end_val:.2%} in 2025."
+                        )
+                    elif end_val < start_val:
+                        insights.append(
+                            f"- The {label.lower()} in {country} decreased from {start_val:.2%} in 2000 to {end_val:.2%} in 2025."
+                        )
+                    else:
+                        insights.append(
+                            f"- The {label.lower()} in {country} remained stable at {start_val:.2%} from 2000 to 2025."
+                        )
+                else:
+                    insights.append(f"- Data for {label.lower()} in {country} is not available for trend analysis.")
+            st.markdown("\n".join(insights))
 
     # smart advice
-    st.subheader("Smart Advice")   
+    st.header("Smart Advice")   
     advice_lines=[]
     # advice for $2.15/day vs global average indicator
     if val_215 is not None and global_avg_values[0] is not None:
