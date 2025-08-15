@@ -155,7 +155,7 @@ if not row.empty:
 
         pred = model.predict(X)[0]
         st.header("Prediction Result")
-        st.caption(f"This section shows the predicted poverty risk for {country} in {year} based on socioeconomic indicators.")
+        st.caption(f"This section shows the predicted poverty risk for {country} in 2025 based on socioeconomic indicators.")
         st.markdown(
             f"""
             <div style="display: flex; justify-content: center; align-items: center; height: 280px;">
@@ -214,11 +214,14 @@ if not row.empty:
     # plot country vs global average graph
     indicators = {
         "Poverty Headcount Ratio at $2.15/day": col_215,
-        "Poverty Headcount Ratio at $3.65/day": col_365
+        "Poverty Headcount Ratio at $3.65/day": col_365,
+        "Poverty Rate After Taxes and Transfers": col_post_tax
     }
-    selected_country_values = [val_215, val_365]
+
+    selected_country_values = [val_215, val_365, val_post_tax if val_post_tax is not None else None]
     global_avg_values = [df[col_215].mean() if col_215 in df.columns else None,
-                        df[col_365].mean() if col_365 in df.columns else None]
+                        df[col_365].mean() if col_365 in df.columns else None,
+                        df[col_post_tax].mean() if col_post_tax in df.columns else None]
 
     compare_df = pd.DataFrame({
         'Indicator': list(indicators.keys()),
@@ -240,10 +243,10 @@ if not row.empty:
         legend_title_text="Variable",
         legend=dict(
             orientation="h",
-            yanchor="bottom",
-            y=-0.3,
+            yanchor="top",
+            y=1.3,
             xanchor="center",
-            x=0.5
+            x=0.5,
         )
     )
 
@@ -274,8 +277,8 @@ if not row.empty:
         legend_title_text="Indicator",
         legend=dict(
             orientation="h",
-            yanchor="bottom",
-            y=-0.3,
+            yanchor="top",
+            y=1.3,
             xanchor="center",
             x=0.5
         )
@@ -375,7 +378,7 @@ if not row.empty:
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.3,
+            y=-0.5,
             xanchor="center",
             x=0.5
         )
