@@ -300,7 +300,8 @@ if not row.empty:
         y="Value",
         color="Indicator",
         template="plotly_dark",
-        markers=True
+        markers=True,
+        height=422
     )
     fig_trend.update_layout(
         xaxis_title="Year",
@@ -333,7 +334,8 @@ if not row.empty:
         y="Value",
         color="Indicator",
         template="plotly_dark",
-        markers=True
+        markers=True,
+        height=400
     )
     fig_tt_trend.update_layout(
         xaxis_title="Year",
