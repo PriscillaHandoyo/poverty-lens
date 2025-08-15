@@ -18,12 +18,12 @@ model = joblib.load(MODEL_PATH)
 df_215 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-headcount-ratio-at-2-15-day.csv'))
 df_365 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-headcount-ratio-at-3-65-day.csv'))
 df_post_tax = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-rate-after-taxes-and-transfers.csv'))
-# df_unemployment = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-unemployment-rate.csv'))
+df_unemployment = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-unemployment-rate.csv'))
 
 # merge data
 df = df_215.merge(df_365, on=['ISO', 'Country'], suffixes=('_215', '_365'))
 df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
-# df = df.merge(df_unemployment, on='Country', how='left')
+df = df.merge(df_unemployment, on=['ISO', 'Country'], suffixes=('', '_unemployment'), how='left')
 
 # sidebar layout for country selection and simulation
 st.sidebar.title("Country & Policy Simulation")
@@ -41,6 +41,17 @@ model_features = model.feature_names_in_
 # default values from data (if available)
 col_215 = f"{year}_215"
 col_365 = f"{year}_365"
+# col_post_tax = f"{year}_post_tax"    
+# Get value from the original post-tax dataframe
+col_unemployment = str(year)
+if col_unemployment in df_unemployment.columns:
+    unemployment_row = df_unemployment[df_unemployment['Country'] == country]
+    if not unemployment_row.empty and not pd.isna(unemployment_row[col_unemployment].values[0]):
+        val_unemployment = unemployment_row[col_unemployment].values[0]
+    else:
+        val_unemployment = None
+else:
+    val_unemployment = None
 default_215 = row['2025_215'].values[0] if not row.empty and '2025_215' in row.columns else 0.0
 default_365 = row['2025_365'].values[0] if not row.empty and '2025_365' in row.columns else 0.0
 
@@ -55,13 +66,13 @@ sim_365 = st.sidebar.slider(
 )
 
 # literacy rate slider
-# col_unemployment = f"{year}_unemployment"
-# default_unemployment = row[col_unemployment].values[0] if not row.empty and col_unemployment in row.columns else 0.0
+col_unemployment = str(year)
+default_unemployment = row[col_unemployment].values[0] if col_unemployment in row.columns else 0.0
 
-# sim_unemployment = st.sidebar.slider(
-#     f"Unemployment Rate (%) ({year})", min_value=0.0, max_value=100.0, value=float(default_unemployment), step=0.1,
-#     help="Adjust to simulate changes in unemployment rate."
-# )
+sim_unemployment = st.sidebar.slider(
+    f"Unemployment Rate (%) ({year})", min_value=0.0, max_value=1.0, value=float(default_unemployment), step=0.1,
+    help="Adjust to simulate changes in unemployment rate."
+)
 
 # print(df[[ 'Country', f'{year}_literacy' ]].head(10))
 
@@ -111,12 +122,12 @@ if not row.empty:
             X.at[X.index[0], col_215] = sim_215
         if col_365 in X.columns:
             X.at[X.index[0], col_365] = sim_365
-        # if col_unemployment in X.columns:
-        #     X.at[X.index[0], col_unemployment] = sim_unemployment
+        if col_unemployment in X.columns:
+            X.at[X.index[0], col_unemployment] = sim_unemployment
 
         pred = model.predict(X)[0]
         st.header("Prediction Result")
-        st.caption(f"This section shows the predicted poverty risk for {country} in 2025 based on socioeconomic indicators.")
+        st.caption(f"This section shows the predicted poverty risk for {country} in {year} based on socioeconomic indicators.")
         st.markdown(
             f"""
             <div style="display: flex; justify-content: center; align-items: center; height: 280px;">
@@ -138,12 +149,31 @@ if not row.empty:
     st.header("Key Poverty Indicators")
     val_215 = sim_215
     val_365 = sim_365
+    val_unemployment = sim_unemployment
     # after taxes and transfers
     col_post_tax = f"{year}"
     if col_post_tax in row.columns and not pd.isna(row[col_post_tax].values[0]):
         val_post_tax = row[col_post_tax].values[0]
     else:
         val_post_tax = None
+    
+    # post tax logic design
+    val_post_tax = None
+    if str(year) in df_post_tax.columns:
+        post_tax_row = df_post_tax[df_post_tax['Country'] == country]
+        if not post_tax_row.empty and not pd.isna(post_tax_row[str(year)].values[0]):
+            val_post_tax = post_tax_row[str(year)].values[0]
+
+    # unemployment logic design
+    col_unemployment = str(year)
+    if col_unemployment in df_unemployment.columns:
+        unemployment_row = df_unemployment[df_unemployment['Country'] == country]
+        if not unemployment_row.empty and not pd.isna(unemployment_row[col_unemployment].values[0]):
+            val_unemployment = unemployment_row[col_unemployment].values[0]
+        else:
+            val_unemployment = None
+    else:
+        val_unemployment = None
     
     col1, col2, col3 = st.columns(3)
 
@@ -164,20 +194,20 @@ if not row.empty:
     with col3:
         st.metric(
             label=f"Poverty Rate After Taxes and Transfers ({year})",
-            value=f"{val_post_tax:.2%}" if val_post_tax is not None else "N/A",
+            value=f"{val_post_tax * 100:.2f}%" if val_post_tax is not None else "N/A",
             help="Poverty Rate After Taxes and Transfers: Share of people living below the poverty line after government taxes and social transfers. Shows the impact of social protection policies."
         )
     
     # add some space between rows (indicators)
-    # st.markdown("<br>", unsafe_allow_html=True)  
+    st.markdown("<br>", unsafe_allow_html=True)  
 
-    # col_unemployment = st.columns(1)
-    # with col_unemployment[0]:
-    #     st.metric(
-    #         label=f"Unemployment Rate ({year})",
-    #         value=f"{sim_unemployment:.1f}%" if sim_unemployment is not None else "N/A",
-    #         help="Unemployment Rate: Percentage of the labor force that is jobless. Higher unemployment can increase poverty risk."
-    #     )
+    col_unemployment = st.columns(1)
+    with col_unemployment[0]:
+        st.metric(
+            label=f"Unemployment Rate ({year})",
+            value=f"{val_unemployment * 100:.1f}%" if val_unemployment is not None else "N/A",
+            help="Unemployment Rate: Percentage of the labor force that is jobless. Higher unemployment can increase poverty risk."
+        )
     
     # add some space
     st.markdown("<br>", unsafe_allow_html=True) 

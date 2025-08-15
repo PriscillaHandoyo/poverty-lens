@@ -17,19 +17,23 @@ def load_data():
     df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
 
     # merge unemployment rate
-    # df_unemployment = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-unemployment-rate.csv'))
-    # df = df.merge(df_unemployment, on='Country', how='left')
+    df_unemployment = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-unemployment-rate.csv'))
+    df = df.merge(df_unemployment, on='Country', how='left')
 
     return df
 
 def prepare_features(df):
     # use 2000-2024 columns as features, 2025 as target
     feature_cols = []
-    for suffix in ['_215', '_365']:
+    for suffix in ['_215', '_365', '_unemployment']:
         for year in range(2000, 2026):  
             col = f"{year}{suffix}"
             if col in df.columns:
                 feature_cols.append(col)
+    for year in range(2000, 2024):  # Only years available
+        col = f"{year}"
+        if col in df.columns:
+            feature_cols.append(col)
     target_col = '2025_215'  
 
     X = df[feature_cols]
