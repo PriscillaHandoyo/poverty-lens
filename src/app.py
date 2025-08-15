@@ -214,16 +214,23 @@ if not row.empty:
     st.markdown("<br>", unsafe_allow_html=True)
 
     # plot country vs global average graph
+    col_unemployment_name = str(year)
     indicators = {
         "Poverty Headcount Ratio at $2.15/day": col_215,
         "Poverty Headcount Ratio at $3.65/day": col_365,
-        "Poverty Rate After Taxes and Transfers": col_post_tax
+        "Poverty Rate After Taxes and Transfers": col_post_tax,
+        "Unemployment Rate": col_unemployment
     }
 
-    selected_country_values = [val_215, val_365, val_post_tax if val_post_tax is not None else None]
+    selected_country_values = [val_215, 
+                               val_365, 
+                               val_post_tax if val_post_tax is not None else None,
+                               val_unemployment if val_unemployment is not None else None]
+    
     global_avg_values = [df[col_215].mean() if col_215 in df.columns else None,
                         df[col_365].mean() if col_365 in df.columns else None,
-                        df[col_post_tax].mean() if col_post_tax in df.columns else None]
+                        df[col_post_tax].mean() if col_post_tax in df.columns else None,
+                        df[col_unemployment_name].mean() if col_unemployment_name in df.columns else None]
 
     compare_df = pd.DataFrame({
         'Indicator': list(indicators.keys()),
@@ -286,7 +293,7 @@ if not row.empty:
     # plot the historical indicators trend
     trend_indicators = {
         "Poverty Headcount Ratio at $2.15/day": [f"{year}_215" for year in range(2000, 2026)],
-        "Poverty Headcount Ratio at $3.65/day": [f"{year}_365" for year in range(2000, 2026)],
+        "Poverty Headcount Ratio at $3.65/day": [f"{year}_365" for year in range(2000, 2026)]
     }
 
     trend_data = pd.DataFrame({"Year": list(range(2000, 2026))})
@@ -320,7 +327,8 @@ if not row.empty:
 
     # plot the historical indicators trend on poverty ratio after taxes and transfers
     trend_tt_indicators = {
-        "Poverty Rate After Taxes and Transfers": [str(year) for year in range(2000, 2026)]
+        "Poverty Rate After Taxes and Transfers": [str(year) for year in range(2000, 2026)],
+        "Unemployment Rate": [f"{year}_unemployment" for year in range(2000, 2026)]
     }
 
     trend_tt_data = pd.DataFrame({"Year": list(range(2000, 2026))})
@@ -355,10 +363,10 @@ if not row.empty:
     # fourth row: country vs global average and trend charts
     fourth_row = st.columns([6, 6])
     with fourth_row[0]:
-        st.header(f"{country} Poverty Rate After Taxes and Transfers Trend")
+        st.header(f"{country} Poverty Rate After Taxes and Transfers & Unemployment Rate Trends")
         st.caption(
-            f"This chart shows the historical trend of the poverty rate after taxes and transfers in {country} from 2000 to 2025. "
-            "It helps you understand how social protection policies and government interventions have impacted poverty over time."
+            f"This chart shows the historical trends of the poverty rate after taxes and transfers and the unemployment rate in {country} from 2000 to 2025. "
+            "You can observe how labor market conditions and social protection policies have impacted poverty over time."
         )
         st.plotly_chart(fig_tt_trend, use_container_width=True, key="tt_trend")
         # insight
@@ -393,6 +401,37 @@ if not row.empty:
                     )
             else:
                 st.markdown("- Data for poverty rate after taxes and transfers is not available for trend analysis.")
+
+            # Unemployment Rate
+            series_unemp = trend_tt_data["Unemployment Rate"].dropna()
+            nonzero_unemp = series_unemp[series_unemp != 0]
+            if not series_unemp.empty:
+                max_unemp = series_unemp.max()
+                max_unemp_idx = series_unemp.idxmax()
+                max_unemp_year = trend_tt_data.loc[max_unemp_idx, "Year"]
+                min_unemp = series_unemp.min()
+                min_unemp_idx = series_unemp.idxmin()
+                min_unemp_year = trend_tt_data.loc[min_unemp_idx, "Year"]
+                avg_unemp = nonzero_unemp.mean() if not nonzero_unemp.empty else 0
+                st.markdown(
+                    f"- The **highest unemployment rate** was **{max_unemp:.2%}** in **{max_unemp_year}**."
+                )
+                st.markdown(
+                    f"- The **lowest unemployment rate** was **{min_unemp:.2%}** in **{min_unemp_year}**."
+                )
+                st.markdown(
+                    f"- The **average unemployment rate** (excluding 0 and missing data) is **{avg_unemp:.2%}**."
+                )
+            else:
+                st.markdown("- Data for unemployment rate is not available for trend analysis.")
+
+            # Relationship insight
+            if not series_tt.empty and not series_unemp.empty:
+                corr = series_tt.corr(series_unemp)
+                st.markdown(
+                    f"The correlation between poverty rate after taxes and transfers and unemployment rate over time is **{corr:.2f}**. "
+                    "A positive value suggests that higher unemployment is associated with higher poverty after taxes and transfers."
+                )
 
     with fourth_row[1]:
         st.header(f"**{country} Poverty Indicator Trends**")
