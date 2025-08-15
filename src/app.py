@@ -363,12 +363,16 @@ if not row.empty:
     # fourth row: country vs global average and trend charts
     fourth_row = st.columns([6, 6])
     with fourth_row[0]:
-        st.header(f"{country} Poverty Rate After Taxes and Transfers & Unemployment Rate Trends")
+        st.markdown(
+            f"<h2 style='margin-bottom:0;'>{country} Poverty & Unemployment Trends</h2>",
+            unsafe_allow_html=True
+        )
         st.caption(
             f"This chart shows the historical trends of the poverty rate after taxes and transfers and the unemployment rate in {country} from 2000 to 2025. "
             "You can observe how labor market conditions and social protection policies have impacted poverty over time."
         )
         st.plotly_chart(fig_tt_trend, use_container_width=True, key="tt_trend")
+        st.divider()
         # insight
         with st.expander("Show Insights"):
             series_tt = trend_tt_data["Poverty Rate After Taxes and Transfers"].dropna()
@@ -440,6 +444,7 @@ if not row.empty:
             "You can observe how the poverty headcount ratios have changed over time and compare their patterns."
         )
         st.plotly_chart(fig_trend, use_container_width=True, key="indicator_trends")
+        st.divider()
         # insights
         with st.expander("Show Insights"):
             insights = []
