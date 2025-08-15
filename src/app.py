@@ -15,12 +15,14 @@ model = joblib.load(MODEL_PATH)
 df_215 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-headcount-ratio-at-2-15-day.csv'))
 df_365 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-headcount-ratio-at-3-65-day.csv'))
 df_post_tax = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-rate-after-taxes-and-transfers.csv'))
+# df_literacy = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-literacy-rate.csv'))
 
 # merge data
 df = df_215.merge(df_365, on=['ISO', 'Country'], suffixes=('_215', '_365'))
 df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
+# df = df.merge(df_literacy, on='Country', how='left')
 
-# Sidebar layout for country selection and simulation
+# sidebar layout for country selection and simulation
 st.sidebar.title("Country & Policy Simulation")
 
 country = st.sidebar.selectbox("Select Country", df['Country'].unique())
@@ -29,6 +31,14 @@ row = df[df['Country'] == country]
 # year selection
 available_years = sorted([int(col.split('_')[0]) for col in df.columns if '_215' in col])
 year = st.sidebar.selectbox("Select Year", available_years, index=available_years.index(2025) if 2025 in available_years else 0)
+
+# col_literacy = f"{year}_literacy"
+# default_literacy = row[col_literacy].values[0] if not row.empty and col_literacy in row.columns else 0.0
+
+# sim_literacy = st.sidebar.slider(
+#     f"Literacy Rate (%) ({year})", min_value=0.0, max_value=100.0, value=float(default_literacy), step=0.1,
+#     help="Adjust to simulate changes in literacy rate."
+# )
 
 # model feature columns
 model_features = model.feature_names_in_
@@ -48,6 +58,8 @@ sim_365 = st.sidebar.slider(
     f"Poverty Headcount Ratio at $3.65/day ({year})", min_value=0.0, max_value=1.0, value=float(default_365), step=0.01,
     help="Adjust to simulate changes in moderate poverty rate."
 )
+
+# print(df[[ 'Country', f'{year}_literacy' ]].head(10))
 
 simulate = st.sidebar.button("Simulate Policy Changes")
 
@@ -93,24 +105,47 @@ if not row.empty:
     st.markdown(f"This section shows the predicted poverty risk for {country} in {year} based on socioeconomic indicators.")
     st.success(f"Poverty Risk ({year}): {pred:.2%}")
 
+    # literacy rate
+    # if col_literacy in X.columns:
+    #     X.at[X.index[0], col_literacy] = sim_literacy
+    
+    # st.subheader("Literacy Rate")
+    # st.info("Literacy Rate: Percentage of people aged 15 and above who can read and write. Higher literacy is linked to lower poverty risk.")
+    # st.write(f"- Literacy Rate ({year}) in {country}: {sim_literacy:.1f}% (simulated)")
+
     # key indicators
     st.subheader("Key Poverty Indicators")
-    st.info("Poverty Headcount Ratio at `$2.15` per day: Percentage of the population living on less than `$2.15` per day (2017 PPP). This is the international extreme poverty line.")
     val_215 = sim_215
-    st.write(f"- Poverty Headcount Ratio at $2.15/day ({year}) in {country}: {val_215:.2%} (simulated)")
-    st.info("Poverty Headcount Ratio at `$3.65` per day: Percentage of the population living on less than `$3.65` per day (2017 PPP). This is a higher poverty threshold used for lower-middle income countries.")
     val_365 = sim_365
-    st.write(f"- Poverty Headcount Ratio at $3.65/day ({year}) in {country}: {val_365:.2%} (simulated)")
-
     # after taxes and transfers
-    st.info("Poverty Rate After Taxes and Transfers: Share of people living below the poverty line after government taxes and social transfers. Shows the impact of social protection policies.")
     col_post_tax = f"{year}"
     if col_post_tax in row.columns and not pd.isna(row[col_post_tax].values[0]):
         val_post_tax = row[col_post_tax].values[0]
-        st.write(f"- Poverty Rate After Taxes and Transfers ({year}) in {country}: {val_post_tax:.2%}")
     else:
         val_post_tax = None
-        st.write(f"- Poverty Rate After Taxes and Transfers ({year}) in {country}: Data not available")
+    
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            label=f"Poverty Headcount Ratio at $2.15/day ({year})",
+            value=f"{val_215:.2%}" if val_215 is not None else "N/A",
+            help="Poverty Headcount Ratio at `$2.15` per day: Percentage of the population living on less than `$2.15` per day (2017 PPP). This is the international extreme poverty line."
+        )
+
+    with col2:
+        st.metric(
+            label=f"Poverty Headcount Ratio at $3.65/day ({year})",
+            value=f"{val_365:.2%}" if val_365 is not None else "N/A",
+            help="Poverty Headcount Ratio at `$3.65` per day: Percentage of the population living on less than `$3.65` per day (2017 PPP). This is a higher poverty threshold used for lower-middle income countries."
+        )
+
+    with col3:
+        st.metric(
+            label=f"Poverty Rate After Taxes and Transfers ({year})",
+            value=f"{val_post_tax:.2%}" if val_post_tax is not None else "N/A",
+            help="Poverty Rate After Taxes and Transfers: Share of people living below the poverty line after government taxes and social transfers. Shows the impact of social protection policies."
+        )
 
     # plot country vs global average graph
     st.subheader(f"{country} vs Global Average ({year})")
