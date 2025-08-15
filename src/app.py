@@ -250,6 +250,37 @@ if not row.empty:
         )
     )
 
+    #plot the country vs global average chart
+    st.header(f"**{country} vs Global Average ({year})**")
+    st.caption(
+            f"This chart compares the {country} poverty indicators for {year} with the global average. "
+            "It helps you see how the country stands relative to the rest of the world for each indicator."
+    )
+    st.plotly_chart(fig, use_container_width=True, key="country_vs_global")
+    # insight
+    with st.expander("Show Insights"):
+        desc_lines = []
+        for i, label in enumerate(compare_df['Indicator']):
+            country_val = compare_df['Selected Country'][i]
+            global_val = compare_df['Global Average'][i]
+            if country_val is not None and global_val is not None:
+                if country_val > global_val:
+                    desc_lines.append(
+                            f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **above** the global average (**{global_val:.2%}**)."
+                    )
+                else:
+                    desc_lines.append(
+                        f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **below** the global average (**{global_val:.2%}**)."
+                    )
+            else:
+                desc_lines.append(
+                    f"Data for {label.lower()} is not available for {country} or global average."
+                )
+        st.markdown("\n".join([f"- {line}" for line in desc_lines]))
+
+    # add some space
+    st.markdown("<br>", unsafe_allow_html=True) 
+
     # plot the historical indicators trend
     trend_indicators = {
         "Poverty Headcount Ratio at $2.15/day": [f"{year}_215" for year in range(2000, 2026)],
@@ -284,35 +315,80 @@ if not row.empty:
         )
     )
 
+    # plot the historical indicators trend on poverty ratio after taxes and transfers
+    trend_tt_indicators = {
+        "Poverty Rate After Taxes and Transfers": [str(year) for year in range(2000, 2026)]
+    }
+
+    trend_tt_data = pd.DataFrame({"Year": list(range(2000, 2026))})
+    for label, cols in trend_tt_indicators.items():
+        values = [row[col].values[0] if col in row.columns and not pd.isna(row[col].values[0]) else None for col in cols]
+        trend_tt_data[label] = values
+
+    trend_tt_melted = trend_tt_data.melt(id_vars="Year", var_name="Indicator", value_name="Value")
+
+    fig_tt_trend = px.line(
+        trend_tt_melted,
+        x="Year",
+        y="Value",
+        color="Indicator",
+        template="plotly_dark",
+        markers=True
+    )
+    fig_tt_trend.update_layout(
+        xaxis_title="Year",
+        yaxis_title="Value",
+        legend_title_text="Indicator",
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=1.3,
+            xanchor="center",
+            x=0.5
+        )
+    )
+
     # fourth row: country vs global average and trend charts
     fourth_row = st.columns([6, 6])
     with fourth_row[0]:
-        st.header(f"**{country} vs Global Average ({year})**")
+        st.header(f"{country} Poverty Rate After Taxes and Transfers Trend")
         st.caption(
-            f"This chart compares the {country} poverty indicators for {year} with the global average. "
-            "It helps you see how the country stands relative to the rest of the world for each indicator."
+            f"This chart shows the historical trend of the poverty rate after taxes and transfers in {country} from 2000 to 2025. "
+            "It helps you understand how social protection policies and government interventions have impacted poverty over time."
         )
-        st.plotly_chart(fig, use_container_width=True, key="country_vs_global")
+        st.plotly_chart(fig_tt_trend, use_container_width=True, key="tt_trend")
         # insight
         with st.expander("Show Insights"):
-            desc_lines = []
-            for i, label in enumerate(compare_df['Indicator']):
-                country_val = compare_df['Selected Country'][i]
-                global_val = compare_df['Global Average'][i]
-                if country_val is not None and global_val is not None:
-                    if country_val > global_val:
-                        desc_lines.append(
-                            f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **above** the global average (**{global_val:.2%}**)."
-                     )
-                    else:
-                        desc_lines.append(
-                            f"The average {label.lower()} in {country} (**{country_val:.2%}**) is **below** the global average (**{global_val:.2%}**)."
-                        )
-                else:
-                    desc_lines.append(
-                        f"Data for {label.lower()} is not available for {country} or global average."
+            series_tt = trend_tt_data["Poverty Rate After Taxes and Transfers"].dropna()
+            # filter 0 and NaN values for average calculation
+            nonzero_series = series_tt[series_tt != 0]
+            if not series_tt.empty:
+                # highest value and year
+                max_val = series_tt.max()
+                max_idx = series_tt.idxmax()
+                max_year = trend_tt_data.loc[max_idx, "Year"]
+                # lowest value and year
+                min_val = series_tt.min()
+                min_idx = series_tt.idxmin()
+                min_year = trend_tt_data.loc[min_idx, "Year"]
+                # average
+                avg_val = nonzero_series.mean() if not nonzero_series.empty else 0
+                st.markdown(
+                   f"- The **highest poverty rate after taxes and transfers** was **{max_val:.2%}** in **{max_year}**."
+                )
+                st.markdown(
+                    f"- The **lowest poverty rate after taxes and transfers** was **{min_val:.2%}** in **{min_year}**."
+                )
+                if not nonzero_series.empty:
+                    st.markdown(
+                        f"- The **average poverty rate after taxes and transfers** (excluding 0 and missing data) is **{avg_val:.2%}**."
                     )
-            st.markdown("\n".join([f"- {line}" for line in desc_lines]))
+                else:
+                    st.markdown(
+                        "- There is no non-zero data available to calculate the average poverty rate after taxes and transfers."
+                    )
+            else:
+                st.markdown("- Data for poverty rate after taxes and transfers is not available for trend analysis.")
 
     with fourth_row[1]:
         st.header(f"**{country} Poverty Indicator Trends**")
@@ -344,46 +420,6 @@ if not row.empty:
                 else:
                     insights.append(f"- Data for {label.lower()} in {country} is not available for trend analysis.")
             st.markdown("\n".join(insights))
-
-    # plot the historical indicators trend on poverty ratio after taxes and transfers
-    st.header(f"{country} Poverty Rate After Taxes and Transfers Trend")
-    st.caption(
-        f"This chart shows the historical trend of the poverty rate after taxes and transfers in {country} from 2000 to 2025. "
-        "It helps you understand how social protection policies and government interventions have impacted poverty over time."
-    )
-
-    trend_tt_indicators = {
-        "Poverty Rate After Taxes and Transfers": [str(year) for year in range(2000, 2026)]
-    }
-
-    trend_tt_data = pd.DataFrame({"Year": list(range(2000, 2026))})
-    for label, cols in trend_tt_indicators.items():
-        values = [row[col].values[0] if col in row.columns and not pd.isna(row[col].values[0]) else None for col in cols]
-        trend_tt_data[label] = values
-
-    trend_tt_melted = trend_tt_data.melt(id_vars="Year", var_name="Indicator", value_name="Value")
-
-    fig_tt_trend = px.line(
-        trend_tt_melted,
-        x="Year",
-        y="Value",
-        color="Indicator",
-        template="plotly_dark",
-        markers=True
-    )
-    fig_tt_trend.update_layout(
-        xaxis_title="Year",
-        yaxis_title="Value",
-        legend_title_text="Indicator",
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.5,
-            xanchor="center",
-            x=0.5
-        )
-    )
-    st.plotly_chart(fig_tt_trend)
 
     # smart advice
     st.header("Smart Advice")   
