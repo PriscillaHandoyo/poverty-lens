@@ -20,12 +20,14 @@ df_365 = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-h
 df_post_tax = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-poverty-rate-after-taxes-and-transfers.csv'))
 df_unemployment = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-unemployment-rate.csv'))
 df_literacy = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-literacy-rate.csv'))
+df_employment = pd.read_csv(os.path.join(DATASET_DIRECTORY, 'cleaned_SDR-2025-employment-to-population-ratio.csv'))
 
 # merge data
 df = df_215.merge(df_365, on=['ISO', 'Country'], suffixes=('_215', '_365'))
 df = df.merge(df_post_tax, on=['ISO', 'Country'], suffixes=('', '_post_tax'))
 df = df.merge(df_unemployment, on=['ISO', 'Country'], suffixes=('', '_unemployment'), how='left')
 df = df.merge(df_literacy, on=['ISO', 'Country'], suffixes=('', '_literacy'), how='left')
+df = df.merge(df_employment, on=['ISO', 'Country'], suffixes=('', '_employment'), how='left')
 
 # sidebar layout for country selection and simulation
 st.sidebar.title("Country & Policy Simulation")
@@ -107,6 +109,17 @@ sim_literacy = st.sidebar.slider(
     f"Literacy Rate (%) ({year})", min_value=0.0, max_value=100.0,
     value=float(default_literacy if default_literacy is not None else 0.0), step=0.1,
     help="Adjust to simulate changes in literacy rate."
+)
+
+# employment rate
+col_employment = f"{year}_employment"
+val_employment = row[col_employment].values[0] if col_employment in row.columns and not pd.isna(row[col_employment].values[0]) else None
+default_employment = val_employment if val_employment is not None else 0.0
+
+sim_employment = st.sidebar.slider(
+    f"Employment Rate (%) ({year})", min_value=0.0, max_value=100.0,
+    value=float(default_employment if default_employment is not None else 0.0), step=0.1,
+    help="Adjust to simulate changes in employment-to-population ratio."
 )
 
 # print(df[[ 'Country', f'{year}_literacy' ]].head(10))
@@ -229,7 +242,7 @@ if not row.empty:
     # add some space between rows (indicators)
     st.markdown("<br>", unsafe_allow_html=True)  
 
-    added_col = st.columns(2)
+    added_col = st.columns(3)
     with added_col[0]:
         st.metric(
             label=f"Unemployment Rate ({year})",
@@ -243,6 +256,13 @@ if not row.empty:
             value=f"{sim_literacy:.1f}%" if sim_literacy is not None else "N/A",
             help="Literacy Rate: Percentage of people aged 15 and above who can read and write."
         )
+
+    with added_col[2]:
+        st.metric(
+            label=f"Employment Rate ({year})",
+            value=f"{sim_employment:.1f}%" if sim_employment is not None else "N/A",
+            help="Employment-to-population ratio: Percentage of working-age population that is employed."
+        )
     
     # add some space
     st.markdown("<br>", unsafe_allow_html=True) 
@@ -255,20 +275,23 @@ if not row.empty:
         "Poverty Headcount Ratio at $3.65/day": col_365,
         "Poverty Rate After Taxes and Transfers": col_post_tax,
         "Unemployment Rate": col_unemployment,
-        "Literacy Rate": col_literacy
+        "Literacy Rate": col_literacy,
+        "Employment Rate": col_employment
     }
 
     selected_country_values = [val_215, 
                                val_365, 
                                val_post_tax if val_post_tax is not None else None,
                                val_unemployment if val_unemployment is not None else None,
-                               val_literacy if val_literacy is not None else None]
+                               val_literacy if val_literacy is not None else None,
+                               sim_employment if sim_employment is not None else None]
     
     global_avg_values = [df[col_215].mean() if col_215 in df.columns else None,
                         df[col_365].mean() if col_365 in df.columns else None,
                         df[col_post_tax].mean() if col_post_tax in df.columns else None,
                         df[col_unemployment_name].mean() if col_unemployment_name in df.columns else None,
-                        df[col_literacy].mean() if col_literacy in df.columns else None]
+                        df[col_literacy].mean() if col_literacy in df.columns else None,
+                        df[col_employment].mean() if col_employment in df.columns else None]
 
     compare_df = pd.DataFrame({
         'Indicator': list(indicators.keys()),
@@ -367,7 +390,8 @@ if not row.empty:
     trend_tt_indicators = {
         "Poverty Rate After Taxes and Transfers": [str(year) for year in range(2000, 2026)],
         "Unemployment Rate": [f"{year}_unemployment" for year in range(2000, 2026)],
-        "Literacy Rate": [f"{year}_literacy" for year in range(2000, 2026)]
+        "Literacy Rate": [f"{year}_literacy" for year in range(2000, 2026)],
+        "Employment Rate": [f"{year}_employment" for year in range(2000, 2026)]
     }
 
     trend_tt_data = pd.DataFrame({"Year": list(range(2000, 2026))})
@@ -445,7 +469,7 @@ if not row.empty:
             else:
                 st.markdown("- Data for poverty rate after taxes and transfers is not available for trend analysis.")
 
-            # Unemployment Rate
+            # unemployment rate
             series_unemp = trend_tt_data["Unemployment Rate"].dropna()
             nonzero_unemp = series_unemp[series_unemp != 0]
             if not series_unemp.empty:
@@ -468,7 +492,7 @@ if not row.empty:
             else:
                 st.markdown("- Data for unemployment rate is not available for trend analysis.")
 
-            # Literacy Rate
+            # literacy rate
             series_lit = trend_tt_data["Literacy Rate"].dropna()
             nonzero_lit = series_lit[series_lit != 0]
             if not series_lit.empty:
@@ -491,18 +515,53 @@ if not row.empty:
             else:
                 st.markdown("- Data for literacy rate is not available for trend analysis.")
 
-            # Relationships
+            # employment rate
+            series_emp = trend_tt_data["Employment Rate"].dropna()
+            nonzero_emp = series_emp[series_emp != 0]
+            if not series_emp.empty:
+                max_emp = series_emp.max()
+                max_emp_idx = series_emp.idxmax()
+                max_emp_year = trend_tt_data.loc[max_emp_idx, "Year"]
+                min_emp = series_emp.min()
+                min_emp_idx = series_emp.idxmin()
+                min_emp_year = trend_tt_data.loc[min_emp_idx, "Year"]
+                avg_emp = nonzero_emp.mean() if not nonzero_emp.empty else 0
+                st.markdown(
+                    f"- The **highest employment rate** was **{max_emp:.2f}%** in **{max_emp_year}**."
+                )
+                st.markdown(
+                    f"- The **lowest employment rate** was **{min_emp:.2f}%** in **{min_emp_year}**."
+                )
+                st.markdown(
+                    f"- The **average employment rate** (excluding 0 and missing data) is **{avg_emp:.2f}%**."
+                )
+            else:
+                st.markdown("- Data for employment rate is not available for trend analysis.")
+
+            # relationships
             if not series_tt.empty and not series_unemp.empty:
                 corr_pov_unemp = series_tt.corr(series_unemp)
                 st.markdown(
-                    f"The correlation between poverty rate after taxes and transfers and unemployment rate over time is **{corr_pov_unemp:.2f}**. "
+                    f"- The correlation between poverty rate after taxes and transfers and unemployment rate over time is **{corr_pov_unemp:.2f}**. "
                     "A positive value suggests that higher unemployment is associated with higher poverty after taxes and transfers."
                 )
             if not series_tt.empty and not series_lit.empty:
                 corr_pov_lit = series_tt.corr(series_lit)
                 st.markdown(
-                    f"The correlation between poverty rate after taxes and transfers and literacy rate over time is **{corr_pov_lit:.2f}**. "
+                    f"- The correlation between poverty rate after taxes and transfers and literacy rate over time is **{corr_pov_lit:.2f}**. "
                     "A negative value suggests that higher literacy is associated with lower poverty after taxes and transfers."
+                )
+            if not series_tt.empty and not series_emp.empty:
+                corr_pov_emp = series_tt.corr(series_emp)
+                st.markdown(
+                    f"- The correlation between poverty rate after taxes and transfers and employment rate over time is **{corr_pov_emp:.2f}**. "
+                    "A negative value suggests that higher employment is associated with lower poverty after taxes and transfers."
+                )
+            if not series_emp.empty and not series_unemp.empty:
+                corr_emp_unemp = series_emp.corr(series_unemp)
+                st.markdown(
+                    f"- The correlation between employment rate and unemployment rate over time is **{corr_emp_unemp:.2f}**. "
+                    "A strong negative value suggests that higher employment is associated with lower unemployment."
                 )
 
     with fourth_row[1]:
