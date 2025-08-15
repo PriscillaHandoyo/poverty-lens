@@ -384,7 +384,7 @@ if not row.empty:
         color="Indicator",
         template="plotly_dark",
         markers=True,
-        height=410
+        height=411
     )
     fig_tt_trend.update_layout(
         xaxis_title="Year",
