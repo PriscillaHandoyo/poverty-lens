@@ -403,13 +403,12 @@ if not row.empty:
     fourth_row = st.columns([6, 6])
     with fourth_row[0]:
         st.markdown(
-            f"<h2 style='margin-bottom:0;'>{country}: Poverty Rate After Taxes & Transfers, Unemployment Rate, and Literacy Rate Trends</h2>",
+            f"<h2 style='margin-bottom:0;'>{country} Poverty, Unemployment, and Literacy Trends</h2>",
             unsafe_allow_html=True
         )
         st.caption(
-            f"This chart shows the historical trends of three key indicators in {country} from 2000 to 2025: "
-            "poverty rate after taxes and transfers, unemployment rate, and literacy rate. "
-            "Explore how education and labor market conditions interact with poverty over time."
+            f"Explore how poverty rate after taxes and transfers, unemployment rate, and literacy rate have changed in {country} from 2000 to 2025. "
+            "This visualization helps you understand the interplay between education, labor market conditions, and poverty over time."
         )
         st.plotly_chart(fig_tt_trend, use_container_width=True, key="tt_trend")
         st.divider()
